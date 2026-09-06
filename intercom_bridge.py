@@ -112,7 +112,14 @@ def _contact_id(email: str) -> str:
     ).get("data", [])
     if found:
         return str(found[0]["id"])
-    return str(_request("POST", "/contacts", {"role": "user", "email": email})["id"])
+    try:
+        return str(_request("POST", "/contacts", {"role": "user", "email": email})["id"])
+    except RuntimeError as e:
+        # Search lags a few seconds behind create; a 409 names the id we wanted.
+        hit = re.search(r"already exists with id=([0-9a-f]+)", str(e))
+        if not hit:
+            raise
+        return hit.group(1)
 
 
 def seed_body(fixture: dict) -> str:

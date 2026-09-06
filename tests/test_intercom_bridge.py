@@ -108,6 +108,18 @@ class SeedTests(unittest.TestCase):
         self.assertEqual(create["role"], "user")
         self.assertTrue(create["email"].endswith("@example.com"))
 
+    def test_conflict_on_create_yields_existing_contact_id(self):
+        def fake(method, path, body=None):
+            if path == "/contacts/search":
+                return {"data": []}
+            if path == "/contacts":
+                raise RuntimeError("Intercom POST /contacts -> 409: already exists with id=6a9d8247eb2ec5e1ed5a4d6d")
+            return {"conversation_id": "502"}
+
+        with mock.patch.object(intercom_bridge, "_request", fake):
+            out = seed(FIXTURES / "delivery_failed_as2_mdn.json")
+        self.assertEqual(out["payload"]["from"]["id"], "6a9d8247eb2ec5e1ed5a4d6d")
+
     def test_seed_body_for_never_created_transaction(self):
         fixture = json.loads((FIXTURES / "unprocessed_unknown_partner.json").read_text())
         self.assertIn("never created", seed_body(fixture))
