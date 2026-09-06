@@ -1,5 +1,8 @@
+import re
 import unittest
 from pathlib import Path
+
+import edi_triage
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,6 +19,14 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("${escapeHtml(e.message)}", html)
         self.assertIn("${escapeHtml(tx.snippet)}", html)
         self.assertNotIn("<div class=\"hypothesis-text\">${h.hypothesis}</div>", html)
+
+    def test_narration_covers_every_classification_leaf(self):
+        html = (ROOT / "static" / "index.html").read_text()
+        block = html.split("const STAGE_STORY = {", 1)[1].split("};", 1)[0]
+        keys = set(re.findall(r'^\s*"([a-z.]+)":', block, re.MULTILINE))
+
+        self.assertEqual(keys, set(edi_triage.LEAVES))
+        self.assertIn("${renderNarration(tx, data)}", html)
 
     def test_escape_html_handles_quotes_and_nullish_values(self):
         html = (ROOT / "static" / "index.html").read_text()
