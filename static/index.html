@@ -198,6 +198,13 @@
         Classification is code, not the model. The statuses are a finite table. The model only ranks,
         writes, and proposes.
       </p>
+      <p>
+        On top of the engine sits a Claude Code skill written in the same structure Orderful uses for its own
+        support skills: trigger prompts, required inputs, a numbered recipe, and behavior rules that propose
+        before acting. A support engineer describes the stuck transaction in plain words, the skill gathers
+        the inputs, calls the triage tool over MCP, checks the answer against a shared failure taxonomy, and
+        hands back a reply and a follow-up. Same engine, four doors: this console, the CLI, the API, and Claude Code.
+      </p>
       <div class="steps">
         <span class="shortcut">1. Pick a transaction</span>
         <span class="arrow">→</span>
@@ -311,6 +318,8 @@ function renderNarration(tx, data) {
       The model then ranked ${hypotheses.length} cause${hypotheses.length === 1 ? "" : "s"} with the evidence field behind each,
       drafted the customer reply, and proposed one follow-up (${escapeHtml(t.kind)}) that would prevent the next ticket like this.
       Nothing has been sent, resent, or changed.
+      The same run is available inside Claude Code through the <b>edi-failure-triage</b> skill, built in the structure
+      Orderful uses for its own support skills, so an engineer can do this from a ticket without opening this page.
     </div>
   `;
 }
