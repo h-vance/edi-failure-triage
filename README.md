@@ -72,6 +72,36 @@ curl -s http://localhost:8001/mcp/ \
 
 Host and origin allowlists for the MCP endpoint come from `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGINS` (comma-separated, localhost by default).
 
+## Intercom
+
+Orderful runs support on Intercom, so the skill can start from the ticket and end on it.
+
+Reading: install Intercom's own Claude Code plugin once (`/plugin install intercom`, then sign in). It is read-only, which is the right shape for reading tickets. The skill uses it to pull the customer's words. Outside Claude Code, `python intercom_bridge.py read <conversation_id>` prints the same text.
+
+Writing: the plugin cannot write, so `intercom_bridge.py` does the one write the workflow needs. After the engineer approves, it posts the triage result as an internal note on the conversation. It never sends a customer-facing reply, and it cannot assign, tag, or close.
+
+Setup, once, against a sandbox workspace:
+
+1. In the Intercom developer hub, create an internal app for the sandbox and copy its access token.
+2. `cp .env.example .env` and fill in `INTERCOM_ACCESS_TOKEN`. The file is gitignored.
+3. Seed a conversation from a fixture, the way a customer would have written it:
+
+```bash
+set -a; source .env; set +a
+python intercom_bridge.py seed fixtures/invalid_date_format_dtm.json
+```
+
+Then the loop:
+
+```bash
+python intercom_bridge.py read <conversation_id>
+python edi_triage.py fixtures/invalid_date_format_dtm.json --json > result.json
+python intercom_bridge.py note <conversation_id> result.json --dry-run
+python intercom_bridge.py note <conversation_id> result.json
+```
+
+`--dry-run` prints the note without sending it. The bridge is stdlib only and about a hundred lines.
+
 ## Fixtures
 
 | File | Classification | Tier | Ticket two |
@@ -105,6 +135,8 @@ Field names and status values follow the transaction API. The `errors[]` shape f
 | `RATE_LIMIT_WINDOW_SECONDS` | `3600` | Window length |
 | `CORS_ORIGINS` | localhost:8080 | Allowed browser origins |
 | `MCP_ALLOWED_HOSTS`, `MCP_ALLOWED_ORIGINS` | localhost | MCP DNS-rebinding allowlists |
+| `INTERCOM_ACCESS_TOKEN` | unset | Needed only by `intercom_bridge.py` |
+| `INTERCOM_ADMIN_ID` | unset | Optional; otherwise the bridge asks `/me` |
 
 ## Live run notes
 

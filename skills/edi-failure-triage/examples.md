@@ -44,6 +44,20 @@ Three annotated sessions, one per failure family that has an error to read. Ever
 
 **What the skill did not do:** resend the PO, or promise the partner would add the location. It proposed contacting the partner's EDI team together and waited.
 
+## 4. From an Intercom conversation to an internal note
+
+**Engineer says:** "Take a look at Intercom conversation 100200300."
+
+**What the skill did first:** read the conversation with the Intercom MCP tool and quoted the customer's words back: "Every PO to Acme has been Invalid since the weekend. We upgraded our ERP on Saturday." The message gave a transaction id and one error line about DTM02 not matching data type DT. It did not say what the three statuses show, and it did not say how many POs failed.
+
+**What the skill asked:** for the three statuses on that transaction and the count of Invalid POs in the last day. It did not fill either in. The engineer read them off the transaction page: `INVALID` / `PENDING` / `NOT_ACKNOWLEDGED`, and 41.
+
+**Then:** the same run as session 1. File `fixtures/invalid_date_format_dtm.json` is that transaction. Tool call, `invalid.guideline`, three hypotheses, a reply, a `rule` as ticket two. The skill presented all of it and stopped.
+
+**After approval:** the skill ran `python intercom_bridge.py note 100200300 result.json`. That put the tier, classification, hypotheses with evidence, the draft reply, and the ticket-two proposal on the conversation as an internal note, visible to the team and not to the customer. The draft is marked "not sent". The engineer pasted the reply into the reply box, edited one sentence, and sent it themselves.
+
+**What the skill did not do:** reply to the customer, assign, tag, or close the conversation. The bridge cannot do those things, on purpose.
+
 ## When nothing is broken
 
 `fixtures/ack_overdue_quiet_partner.json` is the case with no error at all: Delivered, no 997 yet, and the partner has a history of slow acknowledgments. The tool returns `ack.overdue` and ticket two is a `partner_contact`, not an engineering change. The skill's job there is to say so and stop. Not every ticket has a fix inside it.

@@ -22,6 +22,8 @@ Do not use it for questions about a whole partner onboarding, a guideline redesi
 
 ## Inputs the skill needs
 
+If the ticket is in Intercom, start there. Use the Intercom MCP tools (search conversations, get a conversation) to read the customer's message, or run `python intercom_bridge.py read <conversation_id>`. Pull the transaction id, document type, statuses, error text, and what changed from the customer's own words. Anything the ticket does not say is a question back to the customer, not a guess.
+
 Gather these before running anything. Each maps to a field on `FailedTransaction` in `edi_triage.py`.
 
 | Input | Field | Notes |
@@ -40,7 +42,7 @@ If an input is missing, ask for it. Do not fill it in.
 
 ## The recipe
 
-1. Write the inputs to a JSON file shaped like the files under `fixtures/`. Leave out any field you do not have. Never guess a status or an error message.
+1. Read the ticket (Intercom) or the engineer's description. Write the inputs to a JSON file shaped like the files under `fixtures/`. Leave out any field you do not have. Never guess a status or an error message.
 
 2. Classify. Either call the `triage_edi_transaction` MCP tool with the JSON as `tx` (the server must be running: `BEDROCK_MOCK=true python server.py`, and `.mcp.json` points Claude Code at it), or run the CLI:
 
@@ -60,6 +62,15 @@ If an input is missing, ask for it. Do not fill it in.
 
 7. Stop. Present the reply and the ticket-two proposal and wait. Nothing is sent, resent, filed, or changed until the engineer says so.
 
+8. After the engineer approves, and only then, leave the result where the team works. Post it as an internal note on the Intercom conversation:
+
+   ```bash
+   python edi_triage.py path/to/transaction.json --json > result.json
+   python intercom_bridge.py note <conversation_id> result.json
+   ```
+
+   The note is for the team. The engineer sends the customer reply from Intercom themselves.
+
 ## Behavior rules
 
 1. Propose before acting. Every run ends in a proposal, never in an action.
@@ -72,10 +83,12 @@ If an input is missing, ask for it. Do not fill it in.
 8. Mock mode is the default. Call live Bedrock only when the engineer asks for it.
 9. Placeholder ids and invented partners only in examples, fixtures, and this skill. No real customer names, ids, SKUs, or payloads.
 10. Reprocessing is not automated. The tool tells the engineer whether to resend; a person does the resend.
+11. Intercom writes are internal notes only. Never reply to the customer, assign, tag, close, or snooze a conversation from the skill.
 
 ## Reference material
 
 - `reference/edi-failure-taxonomy.md`: the four failure families, the eight leaves, how to tell them apart, and which doc page covers each
 - `skills/edi-failure-triage/examples.md`: three annotated sessions, one per family
 - `fixtures/`: ten invented transactions, one per leaf, with the canned mock result each returns
-- `README.md`: how to run the CLI, the API, the MCP server, and the console
+- `intercom_bridge.py`: read a conversation, post an internal note, seed a sandbox conversation from a fixture
+- `README.md`: how to run the CLI, the API, the MCP server, the console, and the Intercom setup
