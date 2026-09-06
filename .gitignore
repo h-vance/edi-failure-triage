@@ -1,0 +1,21 @@
+# Private interview prep notes, never committed
+TALK.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.env
+
+# OS
+.DS_Store
+
+# Claude Code local state. The skill symlink under .claude/skills/ is tracked
+# so a fresh clone picks the skill up without an install step.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/edi-failure-triage

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="data:,">
+<title>EDI Failure Triage</title>
+<style>
+  :root {
+    --bg: #131519; --surface: #1b1d22; --surface-2: #23262c;
+    --line: #2b2e35; --line-strong: #383c45;
+    --ink: #ececee; --ink-2: #a9adb5; --ink-3: #7e838c;
+    --accent: #7aa2ff; --accent-soft: #1b2236; --accent-line: #2f3f66;
+    --warm: #ff6a33; --ok: #4cc26a; --warn: #e0a83a; --bad: #f0605d;
+    --radius-sm: 6px; --radius: 10px; --radius-lg: 14px; --radius-pill: 999px;
+    --sans: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+    --serif: "Instrument Serif", ui-serif, Georgia, serif;
+    --mono: "DM Mono", ui-monospace, Menlo, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--sans); font-size: 14px; background: var(--bg); color: var(--ink);
+    height: 100vh; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; color-scheme: dark;
+  }
+  a { color: var(--accent); }
+
+  /* Top bar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--surface); flex-shrink: 0;
+  }
+  .topbar h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; color: var(--ink); }
+  .topbar-subtitle { font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 4px; }
+  .bedrock-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--warm); }
+  .topbar-right { display: flex; align-items: center; gap: 18px; font-size: 13px; color: var(--ink-3); }
+  .topbar-right a { color: var(--ink); text-decoration: none; }
+  .topbar-right a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* Layout */
+  .layout { display: flex; flex: 1; overflow: hidden; }
+  .sidebar {
+    width: 288px; border-right: 1px solid var(--line); overflow-y: auto;
+    padding: 18px 14px; background: var(--bg); flex-shrink: 0;
+  }
+  .sidebar-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; color: var(--ink-3); margin-bottom: 10px; padding: 0 6px; }
+  .sidebar-hint { font-size: 11px; color: var(--ink-3); padding: 10px 6px 0; margin-top: 8px; border-top: 1px solid var(--line); }
+  .incident-card {
+    padding: 12px 14px; border-radius: var(--radius); margin-bottom: 8px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface); transition: border-color 0.15s, background 0.15s;
+  }
+  .incident-card:hover { border-color: var(--line-strong); }
+  .incident-card.active { border-color: var(--accent-line); background: var(--accent-soft); }
+  .incident-id { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-bottom: 4px; }
+  .incident-summary { font-size: 13px; color: var(--ink); line-height: 1.4; }
+  .incident-pattern { font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-top: 5px; }
+
+  /* Main content */
+  .main { flex: 1; overflow-y: auto; }
+
+  /* Empty state */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; text-align: center; padding: 40px;
+  }
+  .empty-state h2 { font-family: var(--serif); font-weight: 400; font-size: 36px; line-height: 1.1; letter-spacing: -0.01em; color: var(--ink); margin-bottom: 14px; }
+  .empty-state p { font-size: 14px; line-height: 1.6; max-width: 560px; margin-bottom: 14px; color: var(--ink-2); }
+  .empty-state .steps { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; margin-top: 6px; }
+  .empty-state .arrow { color: var(--ink-3); }
+  .empty-state .shortcut { display: inline-block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 5px 12px; font-family: var(--mono); font-size: 11px; color: var(--ink); }
+  .empty-state .foot { margin-top: 28px; font-size: 12px; color: var(--ink-3); }
+
+  /* Detail */
+  .detail { padding: 28px 32px; display: none; max-width: 960px; }
+  .detail.active { display: block; }
+  .detail-header { margin-bottom: 22px; }
+  .detail-header .id { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .detail-header h2 { font-family: var(--serif); font-weight: 400; font-size: 30px; line-height: 1.15; letter-spacing: -0.01em; margin: 6px 0; }
+  .detail-header .summary { font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+
+  /* Tabs */
+  .detail-tabs { display: flex; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+  .detail-tab {
+    font-size: 13px; padding: 8px 16px; cursor: pointer; color: var(--ink-3);
+    border-bottom: 2px solid transparent; margin-bottom: -1px; user-select: none;
+  }
+  .detail-tab:hover { color: var(--ink); }
+  .detail-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; color: var(--ink-3); margin: 24px 0 12px; }
+  .section-title:first-child { margin-top: 0; }
+
+  .hypothesis { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 12px; }
+  .hypothesis-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .hypothesis-rank { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .confidence { font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+  .confidence::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .confidence.high { color: var(--ok); }
+  .confidence.medium { color: var(--warn); }
+  .confidence.low { color: var(--bad); }
+  .hypothesis-text { font-size: 15px; color: var(--ink); line-height: 1.5; margin-bottom: 10px; }
+  .evidence-ids { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .evidence-tag { font-family: var(--mono); font-size: 11px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 2px 7px; color: var(--ink-2); }
+  .check-note { font-size: 13px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--ink); line-height: 1.5; }
+
+
+  .escalation-box { margin-top: 24px; padding: 18px; border-radius: var(--radius-lg); border: 1px solid var(--line-strong); background: var(--surface-2); }
+  .escalation-box.ready, .escalation-box.reply { border-color: var(--accent-line); background: var(--accent-soft); }
+  .escalation-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; margin-bottom: 8px; color: var(--ink-2); }
+  .escalation-box.ready .label, .escalation-box.reply .label { color: var(--accent); }
+  .escalation-box .ticket-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .escalation-box .comms { font-size: 14px; color: var(--ink); line-height: 1.55; }
+  .escalation-box .copy-btn {
+    margin-top: 12px; font-family: var(--sans); font-size: 12px; font-weight: 500; padding: 7px 14px;
+    border-radius: var(--radius-pill); border: 1px solid var(--ink); background: var(--ink); color: var(--bg); cursor: pointer;
+  }
+  .escalation-box .copy-btn:hover { background: #fff; border-color: #fff; }
+
+  /* Loading */
+  .loading { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: 13px; padding: 40px; justify-content: center; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error */
+  .error-state { text-align: center; padding: 40px; }
+  .error-state .icon { font-size: 28px; margin-bottom: 12px; color: var(--bad); }
+  .error-state p { font-size: 13px; color: var(--bad); margin-bottom: 12px; }
+  .error-state button {
+    font-family: var(--sans); font-size: 12px; font-weight: 500; padding: 7px 16px; border-radius: var(--radius-pill);
+    border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); cursor: pointer;
+  }
+  .error-state button:hover { border-color: var(--ink); }
+
+
+  /* Evidence panel */
+  .evidence-section { margin-top: 22px; }
+  .evidence-section:first-child { margin-top: 0; }
+  .muted { color: var(--ink-3); font-size: 13px; }
+
+  .log-entry { font-family: var(--mono); font-size: 12px; padding: 7px 10px; margin-bottom: 4px; border-radius: var(--radius-sm); border-left: 3px solid; background: var(--surface-2); color: var(--ink); }
+  .log-entry.ERROR { border-color: var(--bad); }
+  .log-entry.WARNING { border-color: var(--warn); }
+  .log-entry.INFO { border-color: var(--accent); }
+  .log-entry .dim { color: var(--ink-3); }
+
+
+  .endpoint-tags, .status-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .status-row { margin-bottom: 18px; }
+  .endpoint-tag { font-family: var(--mono); font-size: 11px; padding: 3px 10px; border-radius: var(--radius-pill); background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); }
+  .snippet { font-family: var(--mono); font-size: 11.5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; color: var(--ink); line-height: 1.5; }
+  .customer-note { font-size: 14px; color: var(--ink); line-height: 1.55; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .fixture-note { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+
+  .api-response { margin-top: 24px; }
+  .api-response summary { cursor: pointer; font-size: 13px; color: var(--accent); padding: 8px 0; }
+  .api-response pre { font-family: var(--mono); font-size: 11.5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px; overflow-x: auto; max-height: 320px; color: var(--ink); }
+
+  @media (max-width: 700px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--line); max-height: 240px; }
+    .detail { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:12px">
+    <h1><span class="bedrock-dot"></span>EDI Failure Triage <span class="topbar-subtitle">support copilot</span></h1>
+  </div>
+  <div class="topbar-right">
+    <a href="/health">/health</a>
+    <a href="https://github.com/h-vance/edi-failure-triage">GitHub</a>
+    <span id="status-text">Checking...</span>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-label">Failed transactions</div>
+    <div id="edi-list"></div>
+    <div class="sidebar-hint">
+      Click a transaction to run triage
+    </div>
+  </div>
+  <div class="main" id="main-content">
+    <div class="empty-state" id="empty-state">
+      <h2>EDI Failure Triage</h2>
+      <p>
+        One failed EDI transaction in. Out: which integration path the customer is on, which failure state
+        it is in, two or three ranked causes with the evidence behind each, a customer reply, and the
+        follow-up that prevents the next ticket.
+      </p>
+      <p>
+        Classification is code, not the model. The statuses are a finite table. The model only ranks,
+        writes, and proposes.
+      </p>
+      <div class="steps">
+        <span class="shortcut">1. Pick a transaction</span>
+        <span class="arrow">→</span>
+        <span class="shortcut">2. Classify and rank</span>
+        <span class="arrow">→</span>
+        <span class="shortcut">3. Reply and ticket two</span>
+      </div>
+      <div class="foot">FastAPI · MCP · mock mode, no AWS account needed</div>
+    </div>
+    <div id="detail-view" class="detail"></div>
+  </div>
+</div>
+
+<script>
+
+let activeId = null;
+let activeTab = "triage";
+let EDI = [];
+let ediCache = {};
+
+
+function renderSidebar() {
+  const ediList = document.getElementById("edi-list");
+  ediList.innerHTML = EDI.map(tx => `
+    <div class="incident-card ${activeId === tx.id ? 'active' : ''}" onclick="selectEdi('${escapeHtml(tx.id)}')">
+      <div class="incident-id">${escapeHtml(tx.ediTransactionType)}</div>
+      <div class="incident-summary">${escapeHtml(String(tx.name ?? "").replace(/_/g, " "))}</div>
+      <div class="incident-pattern">${escapeHtml(tx.validationStatus ?? "NOT_CREATED")} · ${escapeHtml(tx.deliveryStatus)} · ${escapeHtml(tx.acknowledgmentStatus)}</div>
+    </div>
+  `).join("");
+}
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function safeToken(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback;
+}
+
+
+function showLoading() {
+  const el = document.getElementById("detail-view");
+  el.innerHTML = `<div class="loading"><div class="spinner"></div>Running triage...</div>`;
+  document.getElementById("empty-state").style.display = "none";
+  el.classList.add("active");
+}
+
+function showError(id) {
+  const el = document.getElementById("detail-view");
+  el.innerHTML = `
+      <div class="error-state">
+        <div class="icon">⚠</div>
+        <p>Failed to reach triage endpoint</p>
+        <button onclick="selectEdi(activeId)">Retry</button>
+      </div>
+  `;
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  const triage = document.getElementById("triage-panel");
+  const evidence = document.getElementById("evidence-panel");
+  if (!triage || !evidence) return;
+  const tabs = document.querySelectorAll(".detail-tab");
+  triage.style.display = tab === "triage" ? "block" : "none";
+  evidence.style.display = tab === "evidence" ? "block" : "none";
+  tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+}
+
+function renderEdiTriageTab(data) {
+  const hypotheses = asArray(data.hypotheses);
+  const t = data.ticket_two || {};
+  return `
+    <div class="status-row">
+      <span class="evidence-tag">tier: ${escapeHtml(data.tier)}</span>
+      <span class="evidence-tag">classification: ${escapeHtml(data.classification)}</span>
+      <span class="evidence-tag">mode: ${escapeHtml(data.mode)}</span>
+    </div>
+
+    <div class="section-title">Hypotheses (${hypotheses.length})</div>
+    ${hypotheses.map(h => `
+      <div class="hypothesis">
+        <div class="hypothesis-header">
+          <span class="hypothesis-rank">Hypothesis #${escapeHtml(h.rank)}</span>
+          <span class="confidence ${safeToken(h.confidence, ["high", "medium", "low"], "low")}">${escapeHtml(h.confidence)}</span>
+        </div>
+        <div class="hypothesis-text">${escapeHtml(h.hypothesis)}</div>
+        <div class="evidence-ids">
+          ${asArray(h.evidence).map(e => `<span class="evidence-tag">${escapeHtml(e)}</span>`).join("")}
+        </div>
+        ${h.check ? `<div class="check-note">${escapeHtml(h.check)}</div>` : ""}
+      </div>
+    `).join("")}
+
+    <div class="escalation-box reply">
+      <div class="label">Customer reply</div>
+      <div class="comms">${escapeHtml(data.customer_reply)}</div>
+      <button class="copy-btn" onclick="copyComms(this)">Copy to Clipboard</button>
+    </div>
+
+    <div class="escalation-box ticket">
+      <div class="label">Ticket two: ${escapeHtml(t.kind)}, effort ${escapeHtml(t.effort)}</div>
+      <div class="ticket-title">${escapeHtml(t.title)}</div>
+      <div class="comms">${escapeHtml(t.why)}</div>
+    </div>
+
+    <details class="api-response">
+      <summary>Triage JSON response</summary>
+      <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+    </details>
+  `;
+}
+
+function renderEdiTransactionTab(tx) {
+  const errors = asArray(tx.errors);
+  return `
+    <div class="evidence-section">
+      <div class="section-title">Statuses</div>
+      <div class="status-row">
+        <span class="evidence-tag">validationStatus: ${escapeHtml(tx.validationStatus ?? "null (not created)")}</span>
+        <span class="evidence-tag">deliveryStatus: ${escapeHtml(tx.deliveryStatus)}</span>
+        <span class="evidence-tag">acknowledgmentStatus: ${escapeHtml(tx.acknowledgmentStatus)}</span>
+        <span class="evidence-tag">${escapeHtml(tx.direction)}/${escapeHtml(tx.stream)}</span>
+        <span class="evidence-tag">${escapeHtml(tx.senderId)} → ${escapeHtml(tx.receiverId)}</span>
+      </div>
+    </div>
+    <div class="evidence-section">
+      <div class="section-title">Customer Note</div>
+      <div class="customer-note">${escapeHtml(tx.customer_note)}</div>
+    </div>
+    <div class="evidence-section">
+      <div class="section-title">Errors (${errors.length})</div>
+      ${errors.length === 0 ? "<p class='muted'>No errors reported</p>" : errors.map(e => `
+        <div class="log-entry ERROR">
+          <span class="dim">[${escapeHtml(e.source)}]</span> ${escapeHtml(e.message)}
+          <span class="dim">(${escapeHtml(e.path)}${e.code ? ", " + escapeHtml(e.code) : ""})</span>
+        </div>
+      `).join("")}
+    </div>
+    <div class="evidence-section">
+      <div class="section-title">Payload Snippet</div>
+      <div class="snippet">${escapeHtml(tx.snippet)}</div>
+    </div>
+    <div class="evidence-section">
+      <div class="section-title">Context</div>
+      <pre class="snippet">${escapeHtml(JSON.stringify(tx.context ?? {}, null, 2))}</pre>
+    </div>
+    ${tx._note ? `<div class="evidence-section"><div class="section-title">Fixture Note</div><p class="fixture-note">${escapeHtml(tx._note)}</p></div>` : ""}
+  `;
+}
+
+function renderEdiDetail(tx, data) {
+  const el = document.getElementById("detail-view");
+  el.innerHTML = `
+    <div class="detail-header">
+      <div class="id">${escapeHtml(tx.ediTransactionType)} / ${escapeHtml(data.classification)}</div>
+      <h2>${escapeHtml(String(tx.name ?? "").replace(/_/g, " "))}</h2>
+      <div class="summary">${escapeHtml(tx.customer_note)}</div>
+    </div>
+
+    <div class="detail-tabs">
+      <div class="detail-tab ${activeTab === 'triage' ? 'active' : ''}" data-tab="triage" onclick="switchTab('triage')">Triage</div>
+      <div class="detail-tab ${activeTab === 'evidence' ? 'active' : ''}" data-tab="evidence" onclick="switchTab('evidence')">Transaction</div>
+    </div>
+
+    <div id="triage-panel" style="display:${activeTab === 'triage' ? 'block' : 'none'}">
+      ${renderEdiTriageTab(data)}
+    </div>
+    <div id="evidence-panel" style="display:${activeTab === 'evidence' ? 'block' : 'none'}">
+      ${renderEdiTransactionTab(tx)}
+    </div>
+  `;
+  document.getElementById("empty-state").style.display = "none";
+  el.classList.add("active");
+}
+
+async function selectEdi(id) {
+  activeId = id;
+  activeTab = "triage";
+  renderSidebar();
+  const tx = EDI.find(t => t.id === id);
+  if (!tx) return;
+
+  if (ediCache[id]) {
+    renderEdiDetail(tx, ediCache[id]);
+    return;
+  }
+
+  showLoading();
+  try {
+    const res = await fetch("/triage", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(tx)
+    });
+    if (!res.ok) throw new Error(`edi triage failed: ${res.status}`);
+    const data = await res.json();
+    ediCache[id] = data;
+    renderEdiDetail(tx, data);
+  } catch {
+    showError(id);
+  }
+}
+
+
+function copyComms(btn) {
+  const text = btn.parentElement.querySelector(".comms").textContent;
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    btn.textContent = "Copied!";
+    setTimeout(() => btn.textContent = "Copy to Clipboard", 2000);
+  });
+}
+
+fetch("/health").then(r => r.json()).then(d => {
+  document.getElementById("status-text").textContent = d.mode === "mock" ? "Mock mode, no AWS" : "Live Bedrock";
+}).catch(() => {
+  document.getElementById("status-text").textContent = "Offline";
+});
+
+renderSidebar();
+fetch("/fixtures").then(r => r.json()).then(d => {
+  EDI = asArray(d);
+  renderSidebar();
+}).catch(() => {});
+</script>
+</body>
+</html>
