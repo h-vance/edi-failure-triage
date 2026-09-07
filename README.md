@@ -1,6 +1,6 @@
 # EDI Failure Triage
 
-A support copilot for one failed EDI transaction. In: the transaction's statuses, error text, a payload snippet, and the customer's note. Out: which integration path the customer is on, which failure state the transaction is in, two or three ranked causes with the evidence behind each, a draft customer reply, and the follow-up ("ticket two") that prevents the next ticket of the same kind.
+A support copilot for a series of failed EDI transactions. In: the transaction's statuses, error text, a payload snippet, and the customer's note. Out: which integration path the customer is on, which failure state the transaction is in, two or three ranked causes with the evidence behind each, a draft customer reply, and the follow-up ("ticket two") that prevents the next ticket of the same kind.
 
 Classification is code, not the model. The status values are documented and finite, so that step is a table lookup with a test for every branch. The model only does the parts that need judgment: ranking, tone, and the follow-up.
 
