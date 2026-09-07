@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import intercom_bridge
+from edi_triage import FIXTURES_DIR
 
 ROOT = Path(__file__).resolve().parent
 WORKFLOW_ID = "9z1LF0lH7PDaL9Mg"
@@ -52,9 +53,9 @@ def status() -> dict:
 
 
 def start(fixture_name: str) -> dict:
-    path = ROOT / "fixtures" / f"{fixture_name}.json"
-    if not path.exists():
+    if fixture_name not in {p.stem for p in FIXTURES_DIR.glob("*.json")}:  # request input: never join it into a path
         raise KeyError(fixture_name)
+    path = FIXTURES_DIR / f"{fixture_name}.json"
     fixture = json.loads(path.read_text())
     cid = intercom_bridge.seed(path)["conversation_id"]
     fired_at = time.time()
@@ -81,7 +82,7 @@ def _executions(fired_at: float) -> list:
             "tools/call",
             {"name": "search_workflow_executions",
              "arguments": {"workflowId": WORKFLOW_ID, "limit": 5, "startedAfter": to_iso(fired_at - 2)}},
-            _mcp_session, 2,
+            _mcp_session, 2, timeout=10,
         )
         return json.loads(res["result"]["content"][0]["text"])["data"]
     except (OSError, KeyError, ValueError, IndexError):  # n8n down, dead session, odd payload

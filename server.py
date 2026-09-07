@@ -67,7 +67,7 @@ async def demo_status():
 
 
 @app.post("/demo/ticket")
-async def demo_ticket(body: DemoTicket):
+def demo_ticket(body: DemoTicket):  # sync on purpose: urllib to Intercom/n8n must not block the loop
     st = demo_journey.status()
     if not st["ready"]:
         raise HTTPException(status_code=503, detail="missing in .env: " + ", ".join(st["missing"]))
@@ -80,7 +80,7 @@ async def demo_ticket(body: DemoTicket):
 
 
 @app.get("/demo/ticket/{conversation_id}")
-async def demo_ticket_poll(conversation_id: str):
+def demo_ticket_poll(conversation_id: str):  # sync on purpose, see demo_ticket
     if conversation_id not in demo_journey.JOURNEYS:
         raise HTTPException(status_code=404, detail="unknown conversation")
     try:

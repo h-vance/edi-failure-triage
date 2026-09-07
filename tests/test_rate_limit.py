@@ -38,6 +38,12 @@ class RateLimitTests(unittest.TestCase):
         self.assertEqual(response.status_code, 429)
         self.assertIn("Rate limit", response.json()["detail"])
 
+    def test_demo_ticket_post_is_limited_but_polls_are_not(self):
+        for _ in range(2):
+            self.client.post("/demo/ticket", json={"fixture": "nope"})
+        self.assertEqual(self.client.post("/demo/ticket", json={"fixture": "nope"}).status_code, 429)
+        self.assertEqual(self.client.get("/demo/ticket/123").status_code, 404)  # not 429
+
     def test_unrelated_endpoints_are_not_rate_limited(self):
         for _ in range(5):
             response = self.client.get("/health")

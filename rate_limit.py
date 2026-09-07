@@ -7,6 +7,7 @@ from starlette.responses import JSONResponse
 RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "20"))
 RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "3600"))
 RATE_LIMITED_PATHS = ("/triage", "/mcp")
+RATE_LIMITED_EXACT = ("/demo/ticket",)  # opens a real Intercom ticket per call; GET /demo/ticket/{id} polls stay free
 
 _request_log: dict[str, deque] = defaultdict(deque)
 
@@ -29,8 +30,8 @@ class RateLimitMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or not any(
-            scope["path"].startswith(p) for p in RATE_LIMITED_PATHS
+        if scope["type"] != "http" or not (
+            scope["path"] in RATE_LIMITED_EXACT or any(scope["path"].startswith(p) for p in RATE_LIMITED_PATHS)
         ):
             await self.app(scope, receive, send)
             return

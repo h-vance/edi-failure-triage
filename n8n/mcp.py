@@ -8,6 +8,7 @@ Reads N8N_MCP_TOKEN from .env (Settings > Instance-level MCP > Connect > API key
 """
 
 import json
+import os
 import sys
 import urllib.request
 from pathlib import Path
@@ -17,13 +18,15 @@ ENV = Path(__file__).resolve().parent.parent / ".env"
 
 
 def _token() -> str:
-    for line in ENV.read_text().splitlines():
+    if os.getenv("N8N_MCP_TOKEN"):
+        return os.environ["N8N_MCP_TOKEN"]
+    for line in ENV.read_text().splitlines() if ENV.exists() else []:
         if line.startswith("N8N_MCP_TOKEN="):
             return line.split("=", 1)[1].strip()
     raise SystemExit("N8N_MCP_TOKEN is not set in .env")
 
 
-def _rpc(method: str, params: dict, session: str | None, _id: int = 1) -> tuple[dict, str | None]:
+def _rpc(method: str, params: dict, session: str | None, _id: int = 1, timeout: float = 600) -> tuple[dict, str | None]:
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
@@ -32,7 +35,7 @@ def _rpc(method: str, params: dict, session: str | None, _id: int = 1) -> tuple[
     if session:
         headers["Mcp-Session-Id"] = session
     body = json.dumps({"jsonrpc": "2.0", "id": _id, "method": method, "params": params}).encode()
-    with urllib.request.urlopen(urllib.request.Request(URL, data=body, headers=headers, method="POST"), timeout=600) as r:
+    with urllib.request.urlopen(urllib.request.Request(URL, data=body, headers=headers, method="POST"), timeout=timeout) as r:
         text = r.read().decode()
         session = r.headers.get("Mcp-Session-Id") or session
     for line in text.splitlines():

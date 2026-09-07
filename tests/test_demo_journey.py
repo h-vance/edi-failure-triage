@@ -96,6 +96,13 @@ class StatusTests(unittest.TestCase):
                 if v is not None:
                     os.environ[k] = v
 
+    def test_fixture_name_is_never_joined_into_a_path(self):
+        # start() checks the name against the fixtures directory before touching Intercom
+        with self.assertRaises(KeyError):
+            demo_journey.start("../../.claude/settings")
+        with self.assertRaises(KeyError):
+            demo_journey.start("nope")
+
 
 if __name__ == "__main__":
     unittest.main()
