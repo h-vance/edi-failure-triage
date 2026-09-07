@@ -469,7 +469,7 @@ function copyComms(btn) {
 }
 
 fetch("/health").then(r => r.json()).then(d => {
-  document.getElementById("status-text").textContent = d.mode === "mock" ? "Mock mode, no AWS" : "Live Bedrock";
+  document.getElementById("status-text").textContent = d.mode === "mock" ? "Ready" : "Live Bedrock";
 }).catch(() => {
   document.getElementById("status-text").textContent = "Offline";
 });
