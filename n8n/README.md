@@ -2,7 +2,7 @@
 
 An Intercom conversation arrives. n8n reads it, calls this repo's triage server, and leaves an internal note, four conversation attributes, a tag, and a Slack post. Nothing customer-facing is sent. The engineer sends the reply. If the ticket is missing the transaction id, document type, sender, or receiver, the workflow posts a note that asks for them and stops. It never guesses.
 
-This is workflow 1 from [IDEAS.md](../IDEAS.md). Live in n8n as `Triage Intercom EDI ticket` (id `9z1LF0lH7PDaL9Mg`, tags `intercom`, `edi`, `triage`).
+This is the ticket-to-triage-note workflow, the first of a private build list that is not in this repo. Live in n8n as `Triage Intercom EDI ticket` (id `9z1LF0lH7PDaL9Mg`, tags `intercom`, `edi`, `triage`).
 
 ## Files
 
