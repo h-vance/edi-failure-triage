@@ -18,12 +18,12 @@ ENV = Path(__file__).resolve().parent.parent / ".env"
 
 
 def _token() -> str:
-    if os.getenv("N8N_MCP_TOKEN"):
-        return os.environ["N8N_MCP_TOKEN"]
+    if tok := os.getenv("N8N_MCP_TOKEN"):
+        return tok
     for line in ENV.read_text().splitlines() if ENV.exists() else []:
         if line.startswith("N8N_MCP_TOKEN="):
             return line.split("=", 1)[1].strip()
-    raise SystemExit("N8N_MCP_TOKEN is not set in .env")
+    raise SystemExit("N8N_MCP_TOKEN is not set (checked the environment and .env)")
 
 
 def _rpc(method: str, params: dict, session: str | None, _id: int = 1, timeout: float = 600) -> tuple[dict, str | None]:

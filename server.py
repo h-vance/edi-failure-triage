@@ -75,7 +75,7 @@ def demo_ticket(body: DemoTicket):  # sync on purpose: urllib to Intercom/n8n mu
         return demo_journey.start(body.fixture)
     except KeyError:
         raise HTTPException(status_code=400, detail=f"unknown fixture {body.fixture}")
-    except (OSError, RuntimeError) as e:  # Intercom or n8n unreachable: say so, keep the console alive
+    except (OSError, RuntimeError, ValueError) as e:  # Intercom or n8n unreachable, or bad JSON: say so, keep the console alive
         raise HTTPException(status_code=502, detail=str(e)[:300])
 
 
@@ -85,7 +85,7 @@ def demo_ticket_poll(conversation_id: str):  # sync on purpose, see demo_ticket
         raise HTTPException(status_code=404, detail="unknown conversation")
     try:
         return demo_journey.poll(conversation_id)
-    except (OSError, RuntimeError) as e:
+    except (OSError, RuntimeError, ValueError) as e:
         raise HTTPException(status_code=502, detail=str(e)[:300])
 
 

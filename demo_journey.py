@@ -9,12 +9,13 @@ so tests/test_demo_journey.py can drive it with hand-written JSON.
 import importlib.util
 import json
 import os
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 import intercom_bridge
-from edi_triage import FIXTURES_DIR
+from edi_triage import FIXTURES_DIR, list_fixtures
 
 ROOT = Path(__file__).resolve().parent
 WORKFLOW_ID = "9z1LF0lH7PDaL9Mg"
@@ -53,7 +54,7 @@ def status() -> dict:
 
 
 def start(fixture_name: str) -> dict:
-    if fixture_name not in {p.stem for p in FIXTURES_DIR.glob("*.json")}:  # request input: never join it into a path
+    if fixture_name not in {f["name"] for f in list_fixtures()}:  # request input: never join it into a path
         raise KeyError(fixture_name)
     path = FIXTURES_DIR / f"{fixture_name}.json"
     fixture = json.loads(path.read_text())
@@ -64,30 +65,31 @@ def start(fixture_name: str) -> dict:
     return {"conversation_id": cid, "fired_at": fired_at}
 
 
-_mcp = None
+_mcp = _script("mcp")
 _mcp_session = None
+_mcp_lock = threading.Lock()  # ponytail: global lock; polls run in the threadpool and share one MCP session
 
 
 def _executions(fired_at: float) -> list:
-    global _mcp, _mcp_session
-    try:
-        if _mcp is None:
-            _mcp = _script("mcp")
-            _, _mcp_session = _mcp._rpc(
-                "initialize",
-                {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "edi-failure-triage", "version": "1"}},
-                None,
+    global _mcp_session
+    with _mcp_lock:
+        try:
+            if _mcp_session is None:
+                _, _mcp_session = _mcp._rpc(
+                    "initialize",
+                    {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "edi-failure-triage", "version": "1"}},
+                    None, timeout=10,
+                )
+            res, _ = _mcp._rpc(
+                "tools/call",
+                {"name": "search_workflow_executions",
+                 "arguments": {"workflowId": WORKFLOW_ID, "limit": 5, "startedAfter": to_iso(fired_at - 2)}},
+                _mcp_session, 2, timeout=10,
             )
-        res, _ = _mcp._rpc(
-            "tools/call",
-            {"name": "search_workflow_executions",
-             "arguments": {"workflowId": WORKFLOW_ID, "limit": 5, "startedAfter": to_iso(fired_at - 2)}},
-            _mcp_session, 2, timeout=10,
-        )
-        return json.loads(res["result"]["content"][0]["text"])["data"]
-    except (OSError, KeyError, ValueError, IndexError):  # n8n down, dead session, odd payload
-        _mcp = None  # re-initialised on the next poll
-        return []
+            return json.loads(res["result"]["content"][0]["text"])["data"]
+        except (OSError, KeyError, ValueError, IndexError, SystemExit):  # n8n down, dead session, odd payload, CLI-style exit from mcp.py
+            _mcp_session = None  # re-initialised on the next poll
+            return []
 
 
 _app_id_code = None

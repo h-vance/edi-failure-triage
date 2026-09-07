@@ -19,8 +19,9 @@ def reset():
 
 class RateLimitMiddleware:
     """Per-client-IP sliding-window limiter for the endpoints that can trigger
-    a live Bedrock call (/triage, /mcp). Bounds cost/abuse exposure if a
-    deployment ever flips BEDROCK_MOCK off; harmless in mock mode.
+    a live Bedrock call (/triage, /mcp) and for POST /demo/ticket, which opens a
+    real Intercom ticket per call. Bounds cost/abuse exposure if a deployment
+    ever flips BEDROCK_MOCK off; harmless in mock mode.
 
     Plain ASGI middleware (not BaseHTTPMiddleware) so it never buffers or
     interferes with the MCP endpoint's streamed responses on the allowed path.
@@ -31,7 +32,8 @@ class RateLimitMiddleware:
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http" or not (
-            scope["path"] in RATE_LIMITED_EXACT or any(scope["path"].startswith(p) for p in RATE_LIMITED_PATHS)
+            (scope["path"] in RATE_LIMITED_EXACT and scope["method"] == "POST")
+            or any(scope["path"].startswith(p) for p in RATE_LIMITED_PATHS)
         ):
             await self.app(scope, receive, send)
             return

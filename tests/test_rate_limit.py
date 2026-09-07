@@ -44,6 +44,11 @@ class RateLimitTests(unittest.TestCase):
         self.assertEqual(self.client.post("/demo/ticket", json={"fixture": "nope"}).status_code, 429)
         self.assertEqual(self.client.get("/demo/ticket/123").status_code, 404)  # not 429
 
+    def test_only_post_demo_ticket_counts(self):
+        for _ in range(3):
+            self.client.get("/demo/ticket")  # 405s must not spend the window
+        self.assertEqual(self.client.post("/demo/ticket", json={"fixture": "nope"}).status_code, 400)
+
     def test_unrelated_endpoints_are_not_rate_limited(self):
         for _ in range(5):
             response = self.client.get("/health")

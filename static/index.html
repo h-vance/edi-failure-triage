@@ -556,10 +556,13 @@ async function startJourney(txId) {
     const body = await res.json();
     if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`);
     journeys[txId] = {cid: body.conversation_id, started: Date.now(), data: null, waiting: false};
-    journeys[txId].timer = setInterval(() => pollJourney(txId), 1000);  // before the first poll: renderJourney keeps the button disabled while a timer exists
+    // Timer first, then poll: renderJourney only re-enables the button when no timer exists, so a
+    // slow first poll (or a re-render mid-await) cannot let a second click open a second real ticket.
+    journeys[txId].timer = setInterval(() => pollJourney(txId), 1000);
     btn.textContent = "Watching…";
     await pollJourney(txId);
   } catch (e) {
+    if (journeys[txId] && journeys[txId].timer) { clearInterval(journeys[txId].timer); journeys[txId].timer = null; }
     btn.disabled = false;
     btn.textContent = "Send as Intercom ticket";
     note.className = "send-note bad";
@@ -569,11 +572,13 @@ async function startJourney(txId) {
 
 async function pollJourney(txId) {
   const j = journeys[txId];
-  if (!j) return;
+  if (!j || j.inFlight) return;  // a slow poll must not stack up behind the 1 s timer
+  j.inFlight = true;
   try {
     const res = await fetch(`/demo/ticket/${encodeURIComponent(j.cid)}`);
     if (res.ok) j.data = await res.json();
   } catch {}
+  j.inFlight = false;
   const finished = (j.data && j.data.done) || Date.now() - j.started > 45000;
   if (finished) {
     clearInterval(j.timer);
