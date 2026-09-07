@@ -47,6 +47,16 @@ Open the conversation in Intercom. The internal note, the `edi:invalid.guideline
 
 Vague ticket: seed a conversation by hand with "my PO is stuck". The workflow posts a note asking for the transaction id, document type, sender, and receiver.
 
+## Demo script (interview, about 90 seconds)
+
+1. Sidebar: "Ten real failure shapes. Pick one." Click `invalid date format dtm`. Triage tab: "Classification is code. The model only ranks causes and drafts the reply."
+2. Tab **Ticket flow**: "This is what happens when a customer opens this ticket in Intercom. One click." Click **Send as Intercom ticket**.
+3. As the dots turn green: "Intercom webhook, signature verified in n8n, my server ran the triage, the note landed on the ticket, tag and attributes set, Slack posted. Three seconds. The engineer opens the ticket and the answer is already there. Nothing went to the customer."
+4. **Open in Intercom**: the internal note. **Open n8n execution**: the canvas with the green path. "Same JSON, same note formatter, tested byte for byte in pytest."
+5. Close: "Every ticket now carries a leaf and a tag. That is what the analytics and the Fin knowledge loop build on."
+
+Before the interview: n8n up (`docker compose up -d` in `n8n-workflow-as-code`), `python server.py` here, open `http://localhost:8001`, and click the button once so the Intercom contact search is warm. If the button is disabled, the note next to it names the missing `.env` key.
+
 ## Public URL (real tickets, no curl)
 
 ```bash

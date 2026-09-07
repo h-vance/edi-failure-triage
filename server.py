@@ -1,4 +1,5 @@
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -6,7 +7,9 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
+from pydantic import BaseModel
 
+import demo_journey
 from edi_triage import FailedTransaction, list_fixtures, run_edi_triage
 from mcp_server import streamable_http_app
 from rate_limit import RateLimitMiddleware
@@ -47,7 +50,43 @@ async def triage(tx: FailedTransaction):
     if not tx.id.strip():
         raise HTTPException(status_code=400, detail="id is required")
 
-    return run_edi_triage(tx, mock=BEDROCK_MOCK)
+    result = run_edi_triage(tx, mock=BEDROCK_MOCK)
+    # The console's Ticket flow tab reads this back: n8n calls /triage, so the server
+    # knows exactly when the triage step happened without asking n8n for node data.
+    demo_journey.TRIAGE_SEEN[tx.id] = {"at": time.time(), "classification": result["classification"]}
+    return result
+
+
+class DemoTicket(BaseModel):
+    fixture: str
+
+
+@app.get("/demo/status")
+async def demo_status():
+    return demo_journey.status()
+
+
+@app.post("/demo/ticket")
+async def demo_ticket(body: DemoTicket):
+    st = demo_journey.status()
+    if not st["ready"]:
+        raise HTTPException(status_code=503, detail="missing in .env: " + ", ".join(st["missing"]))
+    try:
+        return demo_journey.start(body.fixture)
+    except KeyError:
+        raise HTTPException(status_code=400, detail=f"unknown fixture {body.fixture}")
+    except (OSError, RuntimeError) as e:  # Intercom or n8n unreachable: say so, keep the console alive
+        raise HTTPException(status_code=502, detail=str(e)[:300])
+
+
+@app.get("/demo/ticket/{conversation_id}")
+async def demo_ticket_poll(conversation_id: str):
+    if conversation_id not in demo_journey.JOURNEYS:
+        raise HTTPException(status_code=404, detail="unknown conversation")
+    try:
+        return demo_journey.poll(conversation_id)
+    except (OSError, RuntimeError) as e:
+        raise HTTPException(status_code=502, detail=str(e)[:300])
 
 
 @app.get("/fixtures")

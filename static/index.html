@@ -116,6 +116,44 @@
   }
   .escalation-box .copy-btn:hover { background: #fff; border-color: #fff; }
 
+  /* Ticket flow */
+  .flow .steps { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 4px 0 20px; }
+  .flow .arrow { color: var(--ink-3); }
+  .flow .shortcut { display: inline-block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 5px 12px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); transition: border-color 0.3s, color 0.3s; }
+  .flow .shortcut.done { border-color: var(--ok); color: var(--ink); }
+  .flow .shortcut.active { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+  .flow .shortcut.bad { border-color: var(--bad); color: var(--ink); }
+  .flow .send-row { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .flow .send-btn {
+    font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 9px 18px;
+    border-radius: var(--radius-pill); border: 1px solid var(--ink); background: var(--ink); color: var(--bg); cursor: pointer;
+  }
+  .flow .send-btn:hover { background: #fff; border-color: #fff; }
+  .flow .send-btn:disabled { background: var(--surface-2); border-color: var(--line); color: var(--ink-3); cursor: not-allowed; }
+  .flow .send-note { font-size: 12px; color: var(--ink-3); }
+  .flow .send-note.bad { color: var(--bad); }
+  .journey { list-style: none; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); padding: 6px 0; }
+  .journey-step { display: grid; grid-template-columns: 26px 1fr auto; align-items: start; gap: 0 10px; padding: 11px 18px; border-bottom: 1px solid var(--line); }
+  .journey-step:last-child { border-bottom: none; }
+  .journey-step .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; background: var(--line-strong); justify-self: center; }
+  .journey-step.done .dot { background: var(--ok); }
+  .journey-step.active .dot { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+  .journey-step.bad .dot { background: var(--bad); }
+  .journey-step.skipped .dot { background: transparent; border: 1px solid var(--ink-3); }
+  .journey-step .label { font-size: 14px; color: var(--ink); }
+  .journey-step.pending .label, .journey-step.skipped .label { color: var(--ink-3); }
+  .journey-step .step-detail { grid-column: 2; font-family: var(--mono); font-size: 11px; color: var(--ink-3); margin-top: 3px; word-break: break-word; }
+  .journey-step.bad .step-detail { color: var(--bad); }
+  .journey-step .elapsed { font-family: var(--mono); font-size: 11px; color: var(--ink-3); padding-top: 3px; }
+  .journey-step.done .elapsed { color: var(--ok); }
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(122,162,255,0.6); } 50% { box-shadow: 0 0 0 6px rgba(122,162,255,0); } }
+  .flow .links { display: flex; gap: 10px; margin-top: 14px; }
+  .flow .links a {
+    font-size: 12px; font-weight: 500; padding: 7px 14px; border-radius: var(--radius-pill);
+    border: 1px solid var(--line-strong); color: var(--ink); text-decoration: none; background: var(--surface);
+  }
+  .flow .links a:hover { border-color: var(--ink); }
+
   /* Loading */
   .loading { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: 13px; padding: 40px; justify-content: center; }
   .spinner { width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -221,6 +259,8 @@ let activeId = null;
 let activeTab = "triage";
 let EDI = [];
 let ediCache = {};
+let DEMO = {ready: false, missing: []};   // from /demo/status: can the Ticket flow button run?
+const journeys = {};                       // tx.id -> {cid, timer, started, data, waiting}
 
 
 function renderSidebar() {
@@ -272,13 +312,12 @@ function showError(id) {
 
 function switchTab(tab) {
   activeTab = tab;
-  const triage = document.getElementById("triage-panel");
-  const evidence = document.getElementById("evidence-panel");
-  if (!triage || !evidence) return;
-  const tabs = document.querySelectorAll(".detail-tab");
-  triage.style.display = tab === "triage" ? "block" : "none";
-  evidence.style.display = tab === "evidence" ? "block" : "none";
-  tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+  const panels = {triage: "triage-panel", evidence: "evidence-panel", flow: "flow-panel"};
+  for (const [name, id] of Object.entries(panels)) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = name === tab ? "block" : "none";
+  }
+  document.querySelectorAll(".detail-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
 }
 
 // One sentence per classification leaf: which stage failed and what that means.
@@ -416,6 +455,7 @@ function renderEdiDetail(tx, data) {
     <div class="detail-tabs">
       <div class="detail-tab ${activeTab === 'triage' ? 'active' : ''}" data-tab="triage" onclick="switchTab('triage')">Triage</div>
       <div class="detail-tab ${activeTab === 'evidence' ? 'active' : ''}" data-tab="evidence" onclick="switchTab('evidence')">Transaction</div>
+      <div class="detail-tab ${activeTab === 'flow' ? 'active' : ''}" data-tab="flow" onclick="switchTab('flow')">Ticket flow</div>
     </div>
 
     <div id="triage-panel" style="display:${activeTab === 'triage' ? 'block' : 'none'}">
@@ -424,7 +464,11 @@ function renderEdiDetail(tx, data) {
     <div id="evidence-panel" style="display:${activeTab === 'evidence' ? 'block' : 'none'}">
       ${renderEdiTransactionTab(tx)}
     </div>
+    <div id="flow-panel" class="flow" style="display:${activeTab === 'flow' ? 'block' : 'none'}">
+      ${renderFlowTab(tx)}
+    </div>
   `;
+  renderJourney(tx.id);
   document.getElementById("empty-state").style.display = "none";
   el.classList.add("active");
 }
@@ -466,11 +510,127 @@ function copyComms(btn) {
   });
 }
 
+// ---------- Ticket flow: a real Intercom ticket, handled by the n8n workflow, watched live ----------
+
+const FLOW_STAGES = [
+  ["opened", "Intercom ticket"], ["received", "n8n webhook"], ["triaged", "POST /triage"],
+  ["noted", "Internal note"], ["tagged", "Tag + attributes"], ["slack", "Slack"],
+];
+
+function renderFlowTab(tx) {
+  const stages = FLOW_STAGES.map(([id, label]) => `<span class="shortcut" data-step="${id}">${label}</span>`)
+    .join('<span class="arrow">→</span>');
+  const need = DEMO.ready ? "" : `<span class="send-note bad">Needs in .env: ${escapeHtml(DEMO.missing.join(", "))}</span>`;
+  return `
+    <div class="narration">
+      <div class="label">What this shows</div>
+      One click opens a real Intercom ticket from this transaction and lets the n8n workflow handle it:
+      signature check, read the ticket, run the triage, post the internal note, set the tag and attributes, notify Slack.
+      Nothing is sent to the customer.
+    </div>
+    <div class="steps" id="flow-stages">${stages}</div>
+    <div class="send-row">
+      <button class="send-btn" id="flow-send" onclick="startJourney('${escapeHtml(tx.id)}')" ${DEMO.ready ? "" : "disabled"}>Send as Intercom ticket</button>
+      <span class="send-note" id="flow-note">${need}</span>
+    </div>
+    <div id="journey"></div>
+  `;
+}
+
+async function startJourney(txId) {
+  const tx = EDI.find(t => t.id === txId);
+  const btn = document.getElementById("flow-send");
+  const note = document.getElementById("flow-note");
+  if (!tx || !btn) return;
+  if (journeys[txId] && journeys[txId].timer) clearInterval(journeys[txId].timer);
+  btn.disabled = true;
+  btn.textContent = "Opening ticket…";
+  note.className = "send-note";
+  note.textContent = "";
+  try {
+    const res = await fetch("/demo/ticket", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({fixture: tx.name}),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`);
+    journeys[txId] = {cid: body.conversation_id, started: Date.now(), data: null, waiting: false};
+    btn.textContent = "Watching…";
+    await pollJourney(txId);
+    journeys[txId].timer = setInterval(() => pollJourney(txId), 1000);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Send as Intercom ticket";
+    note.className = "send-note bad";
+    note.textContent = String(e.message || e);
+  }
+}
+
+async function pollJourney(txId) {
+  const j = journeys[txId];
+  if (!j) return;
+  try {
+    const res = await fetch(`/demo/ticket/${encodeURIComponent(j.cid)}`);
+    if (res.ok) j.data = await res.json();
+  } catch {}
+  const finished = (j.data && j.data.done) || Date.now() - j.started > 45000;
+  if (finished) {
+    clearInterval(j.timer);
+    j.timer = null;
+    j.waiting = !(j.data && j.data.done);
+  }
+  if (activeId === txId) renderJourney(txId);
+}
+
+function renderJourney(txId) {
+  const j = journeys[txId];
+  const box = document.getElementById("journey");
+  if (!box) return;
+  const btn = document.getElementById("flow-send");
+  const note = document.getElementById("flow-note");
+  if (btn && DEMO.ready && !(j && j.timer)) {
+    btn.disabled = false;
+    btn.textContent = j ? "Send another ticket" : "Send as Intercom ticket";
+  }
+  if (!j || !j.data) { box.innerHTML = ""; return; }
+  const states = {};
+  const items = asArray(j.data.steps).map(s => {
+    const state = safeToken(s.state, ["pending", "active", "done", "skipped", "bad"], "pending");
+    states[s.id] = state;
+    const elapsed = s.id !== "opened" && s.elapsed !== null && s.elapsed !== undefined ? `+${Number(s.elapsed).toFixed(1)}s` : "";
+    return `
+      <li class="journey-step ${state}">
+        <span class="dot"></span>
+        <span class="label">${escapeHtml(s.label)}</span>
+        <span class="elapsed">${escapeHtml(elapsed)}</span>
+        ${s.detail ? `<div class="step-detail">${escapeHtml(s.detail)}</div>` : ""}
+      </li>`;
+  }).join("");
+  const links = j.data.links || {};
+  const linkHtml = [
+    links.intercom ? `<a href="${escapeHtml(links.intercom)}" target="_blank" rel="noopener">Open in Intercom</a>` : "",
+    links.n8n ? `<a href="${escapeHtml(links.n8n)}" target="_blank" rel="noopener">Open n8n execution</a>` : "",
+  ].join("");
+  box.innerHTML = `<ol class="journey">${items}</ol>${linkHtml ? `<div class="links">${linkHtml}</div>` : ""}`;
+  document.querySelectorAll("#flow-stages .shortcut").forEach(el => {
+    el.className = "shortcut " + (states[el.dataset.step] || "");
+  });
+  if (note && j.waiting) {
+    note.className = "send-note";
+    note.textContent = "Still waiting. Open the n8n execution to see where it is.";
+  }
+}
+
 fetch("/health").then(r => r.json()).then(d => {
   document.getElementById("status-text").textContent = d.mode === "mock" ? "Ready" : "Live Bedrock";
 }).catch(() => {
   document.getElementById("status-text").textContent = "Offline";
 });
+
+fetch("/demo/status").then(r => r.json()).then(d => {
+  DEMO = {ready: !!d.ready, missing: asArray(d.missing)};
+}).catch(() => {});
 
 renderSidebar();
 fetch("/fixtures").then(r => r.json()).then(d => {
