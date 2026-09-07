@@ -43,7 +43,7 @@ python n8n/fire-webhook.py <conversation_id>                   # signs the body 
 python n8n/fire-webhook.py <conversation_id> --bad-signature   # dropped at "Reject: bad signature"
 ```
 
-Open the conversation in Intercom. The internal note, the `edi:invalid.guideline` tag, and the four attributes are there. In n8n, the execution shows the mocked Slack branch. Verified live on 2026-09-07 (execution 51, about 3 seconds).
+Open the conversation in Intercom. The internal note, the `edi:invalid.guideline` tag, and the four attributes are there. In n8n, the execution shows the mocked Slack branch. Verified live on 2026-09-07 with the signature check on: execution 52 (signed, about 3 seconds, note + tag + attributes), execution 53 (wrong signature, 11 ms, nothing written), execution 58 (unsigned through the cloudflared tunnel, dropped). `N8N_SMOKE=1` run: 4 passed in 29 s.
 
 Vague ticket: seed a conversation by hand with "my PO is stuck". The workflow posts a note asking for the transaction id, document type, sender, and receiver.
 

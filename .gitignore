@@ -20,3 +20,6 @@ venv/
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/edi-failure-triage
+
+# Editor state
+.vscode/
