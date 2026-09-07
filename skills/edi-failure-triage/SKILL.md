@@ -20,6 +20,23 @@ Use this skill when a support engineer describes one failed or stuck EDI transac
 
 Do not use it for questions about a whole partner onboarding, a guideline redesign, or a bulk reprocessing job. Those are not one transaction.
 
+## Canonical skill source
+
+[Orderful/orderful-netsuite-skills](https://github.com/Orderful/orderful-netsuite-skills) is the canonical skill library for Orderful EDI work. This skill is a classifier, not a replacement. It names the failure and the evidence; the upstream skills do the account-side work. When a leaf points at NetSuite or the SuiteApp, hand off to the upstream skill instead of improvising.
+
+| Leaf or symptom | Upstream skill |
+|---|---|
+| `invalid.guideline`, `invalid.mapping`, need the real error list | [`fetch-validations`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/fetch-validations/SKILL.md) |
+| `invalid.rule` with a missing item match (`ITEM_LOOKUP_MISSING`) | [`item-lookup`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/item-lookup/SKILL.md) |
+| `invalid.mapping` on an outbound or inbound transform | [`writing-outbound-jsonata`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/writing-outbound-jsonata/SKILL.md), [`writing-inbound-jsonata`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/writing-inbound-jsonata/SKILL.md) |
+| `unprocessed`, or stuck Pending inside NetSuite | [`monitor-mr`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/monitor-mr/SKILL.md), [`which-script-ran`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/which-script-ran/SKILL.md) |
+| Processed clean but the NetSuite record came out wrong | [`inspect-inbound-diagnostics`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/inspect-inbound-diagnostics/SKILL.md) |
+| The engineer approved a resend | [`reprocess-transaction`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/reprocess-transaction/SKILL.md) |
+| A 945 produced a wrong fulfillment, 856, or 810 | [`945-fulfillment-debugging`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/945-fulfillment-debugging/SKILL.md) |
+| Debug reruns left duplicate Error transactions | [`cleanup-orderful-transactions`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/cleanup-orderful-transactions/SKILL.md) |
+
+The run produced something reusable? [`update-skills`](https://github.com/Orderful/orderful-netsuite-skills/blob/main/skills/update-skills/SKILL.md) is how it goes back upstream, as a PR. This repo is not where a shared EDI lesson lands.
+
 ## Inputs the skill needs
 
 If the ticket is in Intercom, start there. Use the Intercom MCP tools (search conversations, get a conversation) to read the customer's message, or run `python intercom_bridge.py read <conversation_id>`. Pull the transaction id, document type, statuses, error text, and what changed from the customer's own words. Anything the ticket does not say is a question back to the customer, not a guess.
@@ -84,6 +101,7 @@ If an input is missing, ask for it. Do not fill it in.
 9. Placeholder ids and invented partners only in examples, fixtures, and this skill. No real customer names, ids, SKUs, or payloads.
 10. Reprocessing is not automated. The tool tells the engineer whether to resend; a person does the resend.
 11. Intercom writes are internal notes only. Never reply to the customer, assign, tag, close, or snooze a conversation from the skill.
+12. Defer to the canonical library. When a leaf maps to an upstream skill above, say so and hand off. Do not reimplement its work here, and do not contradict it.
 
 ## Reference material
 
@@ -91,4 +109,5 @@ If an input is missing, ask for it. Do not fill it in.
 - `skills/edi-failure-triage/examples.md`: three annotated sessions, one per family
 - `fixtures/`: ten invented transactions, one per leaf, with the canned mock result each returns
 - `intercom_bridge.py`: read a conversation, post an internal note, seed a sandbox conversation from a fixture
+- [Orderful/orderful-netsuite-skills](https://github.com/Orderful/orderful-netsuite-skills): the canonical skill library. Check it before writing anything new
 - `README.md`: how to run the CLI, the API, the MCP server, the console, and the Intercom setup

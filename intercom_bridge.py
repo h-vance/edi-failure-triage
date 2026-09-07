@@ -125,6 +125,14 @@ def _contact_id(email: str) -> str:
 def seed_body(fixture: dict) -> str:
     """What a customer would paste: their note, the id, the statuses, the error text."""
     lines = [fixture["customer_note"], "", f"Transaction id: {fixture['id']}"]
+    # A real ticket names the document and the two partners somewhere. Say it here too,
+    # so anything reading the ticket back (the skill, an n8n workflow) has the required
+    # fields without asking a follow-up question.
+    lines.append(
+        f"Document {fixture['ediTransactionType']}, sender {fixture['senderId']}, "
+        f"receiver {fixture['receiverId']}, direction {fixture.get('direction', 'in')}, "
+        f"stream {fixture.get('stream', 'live')}."
+    )
     lines.append(
         f"It shows validation {fixture.get('validationStatus') or 'nothing (never created)'}, "
         f"delivery {fixture.get('deliveryStatus', 'PENDING')}, "

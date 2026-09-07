@@ -124,6 +124,14 @@ class SeedTests(unittest.TestCase):
         fixture = json.loads((FIXTURES / "unprocessed_unknown_partner.json").read_text())
         self.assertIn("never created", seed_body(fixture))
 
+    def test_seed_body_names_the_document_and_both_partners(self):
+        # Anything reading the ticket back needs these four; without them the n8n
+        # workflow would have to ask a follow-up question on every seeded demo.
+        fixture = json.loads((FIXTURES / "invalid_date_format_dtm.json").read_text())
+        body = seed_body(fixture)
+        for value in (fixture["ediTransactionType"], fixture["senderId"], fixture["receiverId"]):
+            self.assertIn(value, body)
+
 
 class TokenTests(unittest.TestCase):
     def test_missing_token_is_a_clear_error(self):
