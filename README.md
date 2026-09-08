@@ -4,6 +4,7 @@
 [![Keep warm](https://github.com/h-vance/edi-failure-triage/actions/workflows/keep-warm.yml/badge.svg)](https://github.com/h-vance/edi-failure-triage/actions/workflows/keep-warm.yml)
 [![Live demo](https://img.shields.io/badge/live%20demo-render-46E3B7?logo=render&logoColor=white)](https://edi-failure-triage.onrender.com)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](requirements.txt)
+[![TypeScript](https://img.shields.io/badge/typescript-n8n%20workflow%20SDK-3178C6?logo=typescript&logoColor=white)](n8n/edi-ticket-triage.workflow.template.ts)
 [![n8n 2.34](https://img.shields.io/badge/n8n-2.34-EA4B71?logo=n8n&logoColor=white)](n8n/README.md)
 [![MCP](https://img.shields.io/badge/MCP-streamable%20HTTP-000000)](#mcp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
