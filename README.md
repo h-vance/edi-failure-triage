@@ -158,6 +158,8 @@ Field names and status values follow the transaction API. The `errors[]` shape f
 | `INTERCOM_ADMIN_ID` | unset | Optional; otherwise the bridge asks `/me` |
 | `INTERCOM_CLIENT_SECRET` | unset | Ticket flow tab: signs the demo webhook (n8n verifies it) |
 | `N8N_MCP_TOKEN` | unset | Ticket flow tab: reads execution ids from n8n |
+| `N8N_URL` | `http://localhost:5678` | Where n8n lives; the hosted demo points at n8n on Render |
+| `N8N_WORKFLOW_ID` | the local workflow id | Id of the triage workflow on that n8n |
 
 ## Live run notes
 

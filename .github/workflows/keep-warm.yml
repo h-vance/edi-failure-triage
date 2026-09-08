@@ -19,10 +19,16 @@ permissions: {}
 jobs:
   ping:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # the triage server and the n8n instance behind its Ticket flow tab
+        url:
+          - https://edi-failure-triage.onrender.com/health
+          - https://edi-triage-n8n.onrender.com/healthz
     steps:
       - name: Ping the deployed service
         env:
-          HEALTH_URL: https://edi-failure-triage.onrender.com/health
+          HEALTH_URL: ${{ matrix.url }}
         run: |
           for attempt in 1 2 3; do
             if status=$(curl -sfS --max-time 90 -o /dev/null -w '%{http_code}' "$HEALTH_URL"); then
