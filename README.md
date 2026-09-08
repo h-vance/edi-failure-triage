@@ -17,7 +17,7 @@ The same logic runs four ways: a CLI, `POST /triage`, an MCP tool named `triage_
 
 ## Provenance
 
-The triage engine came first, as an AWS incident copilot in [aws-bedrock-ops-agent](https://github.com/h-vance/aws-bedrock-ops-agent). After reading the Product Support Engineer posting at Orderful, I spent a weekend pointing it at the transaction failure states in Orderful's public docs and wrote ten invented fixtures shaped after them. After finding Orderful's public [skills repo](https://github.com/Orderful/orderful-netsuite-skills), I split the EDI work into this repo and added a skill in that format, so the engine runs the way their support team already works. I have not used the Orderful product. Every partner, id, and payload here is made up. Where a fixture guesses at how an error surfaces, its `_note` field says so.
+The triage engine came first, as an AWS incident copilot in [aws-bedrock-ops-agent](https://github.com/h-vance/aws-bedrock-ops-agent). I spent a weekend modifying and pointing it at the transaction failure states in Orderful's public docs and wrote ten invented fixtures shaped after them. After finding Orderful's public [skills repo](https://github.com/Orderful/orderful-netsuite-skills), I split the EDI work into this repo and added a skill in that format, so the engine runs the way their support team already works. I have not used the Orderful product. Every partner, id, and payload here is a mock. Where a fixture guesses at how an error surfaces, its `_note` field says so.
 
 ## Run it
 
