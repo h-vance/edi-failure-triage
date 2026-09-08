@@ -2,7 +2,7 @@
 
 An Intercom conversation arrives. n8n reads it, calls this repo's triage server, and leaves an internal note, four conversation attributes, a tag, and a Slack post. Nothing customer-facing is sent. The engineer sends the reply. If the ticket is missing the transaction id, document type, sender, or receiver, the workflow posts a note that asks for them and stops. It never guesses.
 
-This is the ticket-to-triage-note workflow, the first of a private build list that is not in this repo. Live in n8n as `Triage Intercom EDI ticket` (id `9z1LF0lH7PDaL9Mg`, tags `intercom`, `edi`, `triage`).
+This is the ticket-to-triage-note workflow, the first of several planned workflows. Live in n8n as `Triage Intercom EDI ticket` (id `9z1LF0lH7PDaL9Mg`, tags `intercom`, `edi`, `triage`).
 
 ## Files
 
@@ -15,11 +15,11 @@ This is the ticket-to-triage-note workflow, the first of a private build list th
 
 ## One-time setup (done once on 2026-09-07; here so it can be redone)
 
-1. n8n running. This repo uses the instance from `n8n-workflow-as-code` at `http://localhost:5678` (n8n 2.34.5).
+1. n8n running at `http://localhost:5678` (built against n8n 2.34.5).
 2. In n8n: Settings > Instance-level MCP > Enable MCP access > Connect > API key tab. Copy the access token into `.env` as `N8N_MCP_TOKEN`. The n8n public API key does not work for the MCP endpoint.
 3. Optional, for Claude Code: `claude mcp add --scope user --transport http n8n-mcp-key http://localhost:5678/mcp-server/http --header "Authorization: Bearer $N8N_MCP_TOKEN"`. New MCP servers load at session start.
 4. In n8n: a credential of type Bearer Auth named `Intercom (sandbox)` with the token from `.env` `INTERCOM_ACCESS_TOKEN`. The workflow binds it by id; if you recreate it, update the id in the template.
-5. Intercom app client secret (Developer Hub > app > Basic information) in this repo's `.env` as `INTERCOM_CLIENT_SECRET`, and in `~/Projects/n8n-workflow-as-code/.env` under the same name. `docker compose up -d n8n n8n-worker` there so both containers see it. The workflow reads it as `$env.INTERCOM_CLIENT_SECRET`; empty means every webhook is rejected.
+5. Intercom app client secret (Developer Hub > app > Basic information) in this repo's `.env` as `INTERCOM_CLIENT_SECRET`, and in the n8n container's env under the same name (restart n8n and any worker so both see it). The workflow reads it as `$env.INTERCOM_CLIENT_SECRET`; empty means every webhook is rejected.
 6. In Intercom: four conversation attributes, type text: `edi_leaf`, `edi_tier`, `edi_confidence`, `edi_ticket_two_kind`. Created through `POST /conversations/attributes`.
 7. Triage server up: `BEDROCK_MOCK=true python server.py`. n8n reaches it at `http://host.docker.internal:8001`.
 8. Optional: `SLACK_WEBHOOK_URL` in the n8n container env. Empty means the Slack step is mocked.
@@ -43,19 +43,9 @@ python n8n/fire-webhook.py <conversation_id>                   # signs the body 
 python n8n/fire-webhook.py <conversation_id> --bad-signature   # dropped at "Reject: bad signature"
 ```
 
-Open the conversation in Intercom. The internal note, the `edi:invalid.guideline` tag, and the four attributes are there. In n8n, the execution shows the mocked Slack branch. Verified live on 2026-09-07 with the signature check on: execution 52 (signed, about 3 seconds, note + tag + attributes), execution 53 (wrong signature, 11 ms, nothing written), execution 58 (unsigned through the cloudflared tunnel, dropped). `N8N_SMOKE=1` run: 4 passed in 29 s.
+Open the conversation in Intercom. The internal note, the `edi:invalid.guideline` tag, and the four attributes are there. In n8n, the execution shows the mocked Slack branch. Verified live on 2026-09-07 with the signature check on: signed (about 3 seconds, note + tag + attributes), wrong signature (11 ms, nothing written), unsigned through the cloudflared tunnel (dropped). `N8N_SMOKE=1` run: 4 passed in 29 s.
 
 Vague ticket: seed a conversation by hand with "my PO is stuck". The workflow posts a note asking for the transaction id, document type, sender, and receiver.
-
-## Demo script (interview, about 90 seconds)
-
-1. Sidebar: "Ten real failure shapes. Pick one." Click `invalid date format dtm`. Triage tab: "Classification is code. The model only ranks causes and drafts the reply."
-2. Tab **Ticket flow**: "This is what happens when a customer opens this ticket in Intercom. One click." Click **Send as Intercom ticket**.
-3. As the dots turn green: "Intercom webhook, signature verified in n8n, my server ran the triage, the note landed on the ticket, tag and attributes set, Slack posted. Three seconds. The engineer opens the ticket and the answer is already there. Nothing went to the customer."
-4. **Open in Intercom**: the internal note. **Open n8n execution**: the canvas with the green path. "Same JSON, same note formatter, tested byte for byte in pytest."
-5. Close: "Every ticket now carries a leaf and a tag. That is what the analytics and the Fin knowledge loop build on."
-
-Before the interview: n8n up (`docker compose up -d` in `n8n-workflow-as-code`), `python server.py` here, open `http://localhost:8001`, and click the button once so the Intercom contact search is warm. If the button is disabled, the note next to it names the missing `.env` key.
 
 ## Public URL (real tickets, no curl)
 

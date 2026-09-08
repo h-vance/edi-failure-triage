@@ -12,7 +12,7 @@ def _conv(note_body=None, tagged=True):
     if note_body is not None:
         parts.append({"part_type": "note", "body": note_body, "created_at": int(FIRED) + 2})
     return {
-        "id": "215475827415413",
+        "id": "100000000000001",
         "created_at": int(FIRED) - 1,
         "conversation_parts": {"conversation_parts": parts},
         "tags": {"tags": [{"name": "edi:invalid.guideline"}] if tagged else []},
@@ -34,7 +34,7 @@ class BuildJourneyTests(unittest.TestCase):
     def test_full_success(self):
         j = demo_journey.build_journey(
             _conv(note_body="<p><b>EDI triage</b> for x</p>"), [_exec()],
-            {"at": FIRED + 2.1, "classification": "invalid.guideline"}, FIRED, app_id_code="ui6470ff",
+            {"at": FIRED + 2.1, "classification": "invalid.guideline"}, FIRED, app_id_code="abc12345",
         )
         self.assertEqual(set(_states(j).values()), {"done"})
         self.assertTrue(j["done"])
@@ -47,7 +47,7 @@ class BuildJourneyTests(unittest.TestCase):
         self.assertIn("invalid.guideline", by_id["triaged"]["detail"])
         self.assertIn("EDI triage", by_id["noted"]["detail"])
         self.assertEqual(j["links"]["n8n"], "http://localhost:5678/workflow/9z1LF0lH7PDaL9Mg/executions/52")
-        self.assertEqual(j["links"]["intercom"], "https://app.intercom.com/a/inbox/ui6470ff/inbox/conversation/215475827415413")
+        self.assertEqual(j["links"]["intercom"], "https://app.intercom.com/a/inbox/abc12345/inbox/conversation/100000000000001")
 
     def test_nothing_yet(self):
         j = demo_journey.build_journey(_conv(tagged=False), [], None, FIRED)
@@ -95,6 +95,22 @@ class StatusTests(unittest.TestCase):
             for k, v in saved.items():
                 if v is not None:
                     os.environ[k] = v
+
+    def test_blank_dotenv_value_keeps_code_default(self):
+        # .env.example ships every key blank; a blank must not become PORT="" (int() crash) or BEDROCK_MOCK="".
+        import os
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / ".env").write_text("BLANK_DEMO_KEY=\nSET_DEMO_KEY=yes\n")
+            saved_root = demo_journey.ROOT
+            demo_journey.ROOT = Path(d)
+            try:
+                demo_journey._load_dotenv()
+            finally:
+                demo_journey.ROOT = saved_root
+                os.environ.pop("SET_DEMO_KEY", None)
+            self.assertNotIn("BLANK_DEMO_KEY", os.environ)
 
     def test_fixture_name_is_never_joined_into_a_path(self):
         # start() checks the name against the fixtures directory before touching Intercom

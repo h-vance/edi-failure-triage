@@ -535,7 +535,7 @@ const slackConfigured = ifElse({
         ],
       },
     },
-    notes: 'Same switch as n8n-workflow-as-code: unset SLACK_WEBHOOK_URL (CI, clean checkouts) falls back to the mocked node.',
+    notes: 'Unset SLACK_WEBHOOK_URL (CI, clean checkouts) falls back to the mocked node.',
   },
 })
 

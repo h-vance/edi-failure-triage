@@ -34,7 +34,8 @@ def _load_dotenv() -> None:
     for line in env.read_text().splitlines():
         if "=" in line and not line.lstrip().startswith("#"):
             key, value = line.split("=", 1)
-            os.environ.setdefault(key.strip(), value.strip())
+            if value.strip():  # a blank line from .env.example must not shadow the code default
+                os.environ.setdefault(key.strip(), value.strip())
 
 
 _load_dotenv()
