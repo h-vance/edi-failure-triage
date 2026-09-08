@@ -1,6 +1,9 @@
 # EDI Failure Triage
 
 ![Lint](https://github.com/h-vance/edi-failure-triage/actions/workflows/lint.yml/badge.svg)
+![Keep warm](https://github.com/h-vance/edi-failure-triage/actions/workflows/keep-warm.yml/badge.svg)
+
+**Live demo:** [edi-failure-triage.onrender.com](https://edi-failure-triage.onrender.com) (mock mode, Render free tier; the Ticket flow button is off there because the Intercom and n8n keys are not deployed).
 
 A support copilot for a series of failed EDI transactions. In: the transaction's statuses, error text, a payload snippet, and the customer's note. Out: which integration path the customer is on, which failure state the transaction is in, two or three ranked causes with the evidence behind each, a draft customer reply, and the follow-up ("ticket two") that prevents the next ticket of the same kind.
 
