@@ -10,7 +10,7 @@ The same logic runs four ways: a CLI, `POST /triage`, an MCP tool named `triage_
 
 ![Demo: triage a fixture, send it as an Intercom ticket, watch n8n post the note](docs/demo.gif)
 
-*Sped up 3x. Triage tab, then one click on **Send as Intercom ticket**, then the n8n execution that wrote the note.*
+*Sped up 3x. Triage tab, then one click on **Send as Intercom ticket**, the note on the Intercom conversation, then the n8n execution that wrote it.*
 
 ## Provenance
 
