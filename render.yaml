@@ -21,3 +21,14 @@ services:
         value: "edi-failure-triage.onrender.com,127.0.0.1:*,localhost:*,[::1]:*"
       - key: MCP_ALLOWED_ORIGINS
         value: "https://edi-failure-triage.onrender.com,http://127.0.0.1:*,http://localhost:*,http://[::1]:*"
+      # Ticket flow tab. Set in the dashboard, never in this file. See n8n/README.md, "Hosted on Render".
+      - key: N8N_URL
+        sync: false
+      - key: N8N_WORKFLOW_ID
+        sync: false
+      - key: N8N_MCP_TOKEN
+        sync: false
+      - key: INTERCOM_ACCESS_TOKEN
+        sync: false
+      - key: INTERCOM_CLIENT_SECRET
+        sync: false

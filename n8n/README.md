@@ -24,6 +24,15 @@ This is the ticket-to-triage-note workflow, the first of several planned workflo
 7. Triage server up: `BEDROCK_MOCK=true python server.py`. n8n reaches it at `http://host.docker.internal:8001`.
 8. Optional: `SLACK_WEBHOOK_URL` in the n8n container env. Empty means the Slack step is mocked.
 
+## Hosted on Render
+
+The live demo runs a second copy of this workflow on n8n at `https://edi-triage-n8n.onrender.com` (official `n8nio/n8n` image, free web service, free Postgres, created by hand in the dashboard). What differs from the local setup:
+
+- The n8n env carries `TRIAGE_URL=https://edi-failure-triage.onrender.com/triage`, `INTERCOM_CLIENT_SECRET`, `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, and `NODE_OPTIONS=--max-old-space-size=400`. Without the last one Node caps its heap at about 256 MB and n8n dies at boot with "JavaScript heap out of memory".
+- The triage server's env carries `N8N_URL`, `N8N_WORKFLOW_ID`, `N8N_MCP_TOKEN` and the two Intercom keys, so the Ticket flow tab fires the signed webhook at the hosted n8n and reads executions from it.
+- The Intercom Bearer credential was created in the hosted n8n UI; its id replaces the local one when the workflow code is pushed there (`sed` on `newCredential(...)`, then `create_workflow_from_code` and `publish_workflow` through `n8n/mcp.py` with `N8N_URL` set).
+- Only the console button reaches it. Intercom's own webhook still points wherever it was last set; paste the hosted `/webhook/intercom-conversation` URL into Developer Hub to route organic tickets there too.
+
 ## Push a change
 
 ```bash
