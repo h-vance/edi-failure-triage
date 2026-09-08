@@ -2,6 +2,7 @@ services:
   - type: web
     name: edi-failure-triage
     runtime: python
+    plan: free
     repo: https://github.com/h-vance/edi-failure-triage
     branch: main
     buildCommand: pip install -r requirements.txt
