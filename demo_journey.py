@@ -18,8 +18,6 @@ import intercom_bridge
 from edi_triage import FIXTURES_DIR, list_fixtures
 
 ROOT = Path(__file__).resolve().parent
-WORKFLOW_ID = "9z1LF0lH7PDaL9Mg"
-N8N_URL = "http://localhost:5678"
 REQUIRED_ENV = ("INTERCOM_ACCESS_TOKEN", "INTERCOM_CLIENT_SECRET", "N8N_MCP_TOKEN")
 
 JOURNEYS: dict[str, dict] = {}     # conversation_id -> {fired_at, transaction_id, fixture}
@@ -39,6 +37,8 @@ def _load_dotenv() -> None:
 
 
 _load_dotenv()
+N8N_URL = os.getenv("N8N_URL", "http://localhost:5678").rstrip("/")  # the hosted demo points this at n8n on Render
+WORKFLOW_ID = os.getenv("N8N_WORKFLOW_ID", "9z1LF0lH7PDaL9Mg")
 
 
 def _script(name: str):
@@ -61,7 +61,7 @@ def start(fixture_name: str) -> dict:
     fixture = json.loads(path.read_text())
     cid = intercom_bridge.seed(path)["conversation_id"]
     fired_at = time.time()
-    _script("fire-webhook").fire(cid)
+    _script("fire-webhook").fire(cid, f"{N8N_URL}/webhook/intercom-conversation")
     JOURNEYS[cid] = {"fired_at": fired_at, "transaction_id": fixture["id"], "fixture": fixture_name}
     return {"conversation_id": cid, "fired_at": fired_at}
 

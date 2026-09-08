@@ -15,7 +15,7 @@ import os
 import sys
 import urllib.request
 
-DEFAULT_URL = "http://localhost:5678/webhook/intercom-conversation"
+DEFAULT_URL = os.getenv("N8N_URL", "http://localhost:5678").rstrip("/") + "/webhook/intercom-conversation"
 
 
 def sign(secret: str, body: bytes) -> str:

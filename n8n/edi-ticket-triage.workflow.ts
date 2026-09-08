@@ -312,7 +312,7 @@ const runTriage = node({
     name: 'Run triage',
     parameters: {
       method: 'POST',
-      url: 'http://host.docker.internal:8001/triage',
+      url: expr("{{ $env.TRIAGE_URL || 'http://host.docker.internal:8001/triage' }}"),
       ...jsonBodyBase, jsonBody: expr("{{ JSON.stringify($('Extract triage inputs').item.json.result.tx) }}"),
       options: { timeout: 30000 },
     },

@@ -13,7 +13,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-URL = "http://localhost:5678/mcp-server/http"
+URL = os.getenv("N8N_URL", "http://localhost:5678").rstrip("/") + "/mcp-server/http"
 ENV = Path(__file__).resolve().parent.parent / ".env"
 
 
