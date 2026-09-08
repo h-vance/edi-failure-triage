@@ -1,7 +1,12 @@
 # EDI Failure Triage
 
-![Lint](https://github.com/h-vance/edi-failure-triage/actions/workflows/lint.yml/badge.svg)
-![Keep warm](https://github.com/h-vance/edi-failure-triage/actions/workflows/keep-warm.yml/badge.svg)
+[![CI](https://github.com/h-vance/edi-failure-triage/actions/workflows/lint.yml/badge.svg)](https://github.com/h-vance/edi-failure-triage/actions/workflows/lint.yml)
+[![Keep warm](https://github.com/h-vance/edi-failure-triage/actions/workflows/keep-warm.yml/badge.svg)](https://github.com/h-vance/edi-failure-triage/actions/workflows/keep-warm.yml)
+[![Live demo](https://img.shields.io/badge/live%20demo-render-46E3B7?logo=render&logoColor=white)](https://edi-failure-triage.onrender.com)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](requirements.txt)
+[![n8n 2.34](https://img.shields.io/badge/n8n-2.34-EA4B71?logo=n8n&logoColor=white)](n8n/README.md)
+[![MCP](https://img.shields.io/badge/MCP-streamable%20HTTP-000000)](#mcp)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 **Live demo:** [edi-failure-triage.onrender.com](https://edi-failure-triage.onrender.com). Mock mode on Render's free tier, with n8n hosted next to it, so the **Ticket flow** button opens a real sandbox ticket and runs the whole workflow. Free instances sleep when idle; a scheduled ping keeps both warm.
 
