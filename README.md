@@ -8,6 +8,10 @@ Classification is code, not the model. The status values are documented and fini
 
 The same logic runs four ways: a CLI, `POST /triage`, an MCP tool named `triage_edi_transaction`, and a Claude Code skill in the format Orderful uses for its own support skills.
 
+![Demo: triage a fixture, send it as an Intercom ticket, watch n8n post the note](docs/demo.gif)
+
+*Sped up 3x. Triage tab, then one click on **Send as Intercom ticket**, then the n8n execution that wrote the note.*
+
 ## Provenance
 
 The triage engine came first, as an AWS incident copilot in [aws-bedrock-ops-agent](https://github.com/h-vance/aws-bedrock-ops-agent). After reading the Product Support Engineer posting at Orderful, I spent a weekend pointing it at the transaction failure states in Orderful's public docs and wrote ten invented fixtures shaped after them. After finding Orderful's public [skills repo](https://github.com/Orderful/orderful-netsuite-skills), I split the EDI work into this repo and added a skill in that format, so the engine runs the way their support team already works. I have not used the Orderful product. Every partner, id, and payload here is made up. Where a fixture guesses at how an error surfaces, its `_note` field says so.
