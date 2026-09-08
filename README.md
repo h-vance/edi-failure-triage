@@ -11,9 +11,9 @@ Classification is code, not the model. The status values are documented and fini
 
 The same logic runs four ways: a CLI, `POST /triage`, an MCP tool named `triage_edi_transaction`, and a Claude Code skill in the format Orderful uses for its own support skills.
 
-![Demo: triage a fixture, send it as an Intercom ticket, watch n8n post the note](docs/demo.gif)
+![Demo: a customer asks about an overdue invoice, n8n triages it, and the agent gets a draft reply and a next action](docs/demo.gif)
 
-*Sped up 3x. Triage tab, then one click on **Send as Intercom ticket**, the note on the Intercom conversation, then the n8n execution that wrote it.*
+*One ticket, start to finish: the customer's question in Intercom, the n8n workflow picking it up, the answer, the draft reply saved as an internal note, the next action for the agent, and the completed execution.*
 
 ## Provenance
 
