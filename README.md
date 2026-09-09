@@ -9,7 +9,7 @@
 [![MCP](https://img.shields.io/badge/MCP-streamable%20HTTP-000000)](#mcp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-**Live demo:** [edi-failure-triage.onrender.com](https://edi-failure-triage.onrender.com). Mock mode on Render's free tier, with n8n hosted next to it, so the **Ticket flow** button opens a real sandbox ticket and runs the whole workflow. Free instances sleep when idle; a scheduled ping keeps both warm.
+Mock mode on Render's free tier, with n8n hosted next to it, so the **Ticket flow** button opens a real sandbox ticket and runs the whole workflow. Free instances sleep when idle; a scheduled ping keeps both warm.
 
 A support copilot for a series of failed EDI transactions. In: the transaction's statuses, error text, a payload snippet, and the customer's note. Out: which integration path the customer is on, which failure state the transaction is in, two or three ranked causes with the evidence behind each, a draft customer reply, and the follow-up ("ticket two") that prevents the next ticket of the same kind.
 
