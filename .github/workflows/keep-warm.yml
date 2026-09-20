@@ -5,8 +5,8 @@
 # container resident, so the first click answers in under a second.
 #
 # Render restarts the container from time to time, and a single ping that
-# lands mid-restart used to fail the whole run. Three attempts spread over
-# a minute tell a restart apart from a service that is genuinely down.
+# lands mid-restart used to fail the whole run. Six attempts spread over
+# a few minutes tell a restart apart from a service that is genuinely down.
 name: Keep warm
 
 on:
@@ -30,15 +30,15 @@ jobs:
         env:
           HEALTH_URL: ${{ matrix.url }}
         run: |
-          for attempt in 1 2 3; do
+          for attempt in 1 2 3 4 5 6; do
             if status=$(curl -sfS --max-time 90 -o /dev/null -w '%{http_code}' "$HEALTH_URL"); then
               echo "Attempt $attempt: HTTP $status, the service is warm."
               exit 0
             fi
             echo "Attempt $attempt did not get a healthy response."
-            if [ "$attempt" -lt 3 ]; then
+            if [ "$attempt" -lt 6 ]; then
               sleep 30
             fi
           done
-          echo "No healthy response after 3 attempts over one minute."
+          echo "No healthy response after 6 attempts."
           exit 1
