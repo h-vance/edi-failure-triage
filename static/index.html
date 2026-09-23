@@ -260,6 +260,7 @@ let activeTab = "triage";
 let EDI = [];
 let ediCache = {};
 let DEMO = {ready: false, missing: []};   // from /demo/status: can the Ticket flow button run?
+let N8N = {state: "unknown", wakingFor: 0, timer: null};  // from /demo/warm: is the hosted n8n awake?
 const journeys = {};                       // tx.id -> {cid, timer, started, data, waiting}
 
 
@@ -517,10 +518,56 @@ const FLOW_STAGES = [
   ["noted", "Internal note"], ["tagged", "Tag + attributes"], ["slack", "Slack"],
 ];
 
+// Two gates on the Send button: the env must be complete, and the hosted n8n must be awake.
+// Missing env wins because nothing can fix it from the console.
+function flowGate() {
+  if (!DEMO.ready) return {ok: false, cls: "bad", text: `Needs in .env: ${DEMO.missing.join(", ")}`};
+  if (N8N.state === "warm") return {ok: true, cls: "", text: ""};
+  if (N8N.state === "waking") {
+    return {ok: false, cls: "", text: `Waking n8n, ${N8N.wakingFor}s so far. Render's free instance sleeps when idle; the first wake takes a minute or two.`};
+  }
+  return {ok: false, cls: "", text: "Checking n8n…"};
+}
+
+// Update the button and note in place. Re-rendering the tab would wipe the journey timeline.
+function refreshFlowGate() {
+  const btn = document.getElementById("flow-send");
+  const note = document.getElementById("flow-note");
+  if (!btn) return;
+  const j = activeId ? journeys[activeId] : null;
+  if (j && j.timer) return;  // a ticket is in flight: the journey owns the button and the note
+  const gate = flowGate();
+  btn.disabled = !gate.ok;
+  if (!note) return;
+  if (gate.text) {
+    note.className = "send-note " + gate.cls;
+    note.textContent = gate.text;
+    note.dataset.gate = "1";
+  } else if (note.dataset.gate) {  // only clear a note this gate wrote; leave journey errors alone
+    note.className = "send-note";
+    note.textContent = "";
+    delete note.dataset.gate;
+  }
+}
+
+// Poll /demo/warm every 10 s while the page is visible. The probe behind it is what wakes n8n.
+function warmN8n() {
+  if (N8N.timer) return;
+  const tick = () => {
+    if (document.hidden) return;
+    fetch("/demo/warm").then(r => r.json()).then(d => {
+      N8N.state = safeToken(d.n8n, ["warm", "waking"], "waking");
+      N8N.wakingFor = Number(d.waking_for) || 0;
+    }).catch(() => { N8N.state = "waking"; }).then(refreshFlowGate);
+  };
+  tick();
+  N8N.timer = setInterval(tick, 10000);
+}
+
 function renderFlowTab(tx) {
   const stages = FLOW_STAGES.map(([id, label]) => `<span class="shortcut" data-step="${id}">${label}</span>`)
     .join('<span class="arrow">→</span>');
-  const need = DEMO.ready ? "" : `<span class="send-note bad">Needs in .env: ${escapeHtml(DEMO.missing.join(", "))}</span>`;
+  const gate = flowGate();
   return `
     <div class="narration">
       <div class="label">What this shows</div>
@@ -530,8 +577,8 @@ function renderFlowTab(tx) {
     </div>
     <div class="steps" id="flow-stages">${stages}</div>
     <div class="send-row">
-      <button class="send-btn" id="flow-send" onclick="startJourney('${escapeHtml(tx.id)}')" ${DEMO.ready ? "" : "disabled"}>Send as Intercom ticket</button>
-      <span class="send-note" id="flow-note">${need}</span>
+      <button class="send-btn" id="flow-send" onclick="startJourney('${escapeHtml(tx.id)}')" ${gate.ok ? "" : "disabled"}>Send as Intercom ticket</button>
+      <span class="send-note ${gate.cls}" id="flow-note" ${gate.text ? 'data-gate="1"' : ""}>${escapeHtml(gate.text)}</span>
     </div>
     <div id="journey"></div>
   `;
@@ -547,6 +594,20 @@ async function startJourney(txId) {
   btn.textContent = "Opening ticket…";
   note.className = "send-note";
   note.textContent = "";
+  delete note.dataset.gate;
+  // Last look before opening a real ticket: never fire the webhook at a sleeping n8n.
+  try {
+    const w = await fetch("/demo/warm").then(r => r.json());
+    N8N.state = safeToken(w.n8n, ["warm", "waking"], "waking");
+    N8N.wakingFor = Number(w.waking_for) || 0;
+  } catch {
+    N8N.state = "waking";
+  }
+  if (N8N.state !== "warm") {
+    btn.textContent = "Send as Intercom ticket";
+    refreshFlowGate();
+    return;
+  }
   try {
     const res = await fetch("/demo/ticket", {
       method: "POST",
@@ -594,7 +655,7 @@ function renderJourney(txId) {
   if (!box) return;
   const btn = document.getElementById("flow-send");
   const note = document.getElementById("flow-note");
-  if (btn && DEMO.ready && !(j && j.timer)) {
+  if (btn && flowGate().ok && !(j && j.timer)) {
     btn.disabled = false;
     btn.textContent = j ? "Send another ticket" : "Send as Intercom ticket";
   }
@@ -635,6 +696,8 @@ fetch("/health").then(r => r.json()).then(d => {
 
 fetch("/demo/status").then(r => r.json()).then(d => {
   DEMO = {ready: !!d.ready, missing: asArray(d.missing)};
+  if (DEMO.ready) warmN8n();  // a local run without .env never polls
+  refreshFlowGate();
 }).catch(() => {});
 
 renderSidebar();

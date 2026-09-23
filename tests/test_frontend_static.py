@@ -36,5 +36,14 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn(".replace(/'/g, \"&#39;\")", html)
 
 
+    def test_ticket_flow_button_waits_for_the_hosted_n8n(self):
+        # the Send button has two gates: complete env, and an awake n8n behind GET /demo/warm
+        html = (ROOT / "static" / "index.html").read_text()
+        self.assertIn('fetch("/demo/warm")', html)
+        self.assertIn("if (DEMO.ready) warmN8n();", html)  # a local run without .env never polls
+        self.assertIn("document.hidden", html)              # hidden tabs do not poll
+        self.assertIn('gate.ok ? "" : "disabled"', html)
+
+
 if __name__ == "__main__":
     unittest.main()

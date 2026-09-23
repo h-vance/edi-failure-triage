@@ -28,10 +28,37 @@ This is the ticket-to-triage-note workflow, the first of several planned workflo
 
 The live demo runs a second copy of this workflow on n8n at `https://edi-triage-n8n.onrender.com` (official `n8nio/n8n` image, free web service, free Postgres, created by hand in the dashboard). What differs from the local setup:
 
-- The n8n env carries `TRIAGE_URL=https://edi-failure-triage.onrender.com/triage`, `INTERCOM_CLIENT_SECRET`, `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, and `NODE_OPTIONS=--max-old-space-size=400`. Without the last one Node caps its heap at about 256 MB and n8n dies at boot with "JavaScript heap out of memory".
+- The n8n env carries `TRIAGE_URL=https://edi-failure-triage.onrender.com/triage`, `INTERCOM_CLIENT_SECRET`, `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`, and a `NODE_OPTIONS` heap setting. Without one Node caps its heap at about 256 MB and n8n dies at boot with "JavaScript heap out of memory"; too large a value and the container runs out of RAM instead. See "Memory on the free instance" below.
 - The triage server's env carries `N8N_URL`, `N8N_WORKFLOW_ID`, `N8N_MCP_TOKEN` and the two Intercom keys, so the Ticket flow tab fires the signed webhook at the hosted n8n and reads executions from it.
 - The Intercom Bearer credential was created in the hosted n8n UI; its id replaces the local one when the workflow code is pushed there (`sed` on `newCredential(...)`, then `create_workflow_from_code` and `publish_workflow` through `n8n/mcp.py` with `N8N_URL` set).
 - Only the console button reaches it. Intercom's own webhook still points wherever it was last set; paste the hosted `/webhook/intercom-conversation` URL into Developer Hub to route organic tickets there too.
+- The instance sleeps after 15 idle minutes. The console's Ticket flow tab polls `GET /demo/warm` on the triage server, which probes n8n's `/healthz`; the probe is what starts the boot, and the Send button stays off until n8n answers.
+
+### Memory on the free instance
+
+On 2026-09-22 Render alerted that this service exceeded its 512 MB limit during a cold start and restarted it. The keep-warm run history shows the same signature (90 s timeout, then two 502s, then healthy) several times a week since the service was created. The cause was the first fix: `NODE_OPTIONS=--max-old-space-size=400` gives V8 400 MB of old space on a 512 MB box, leaving about 112 MB for the young generation, native buffers, and the runtime. n8n also starts a task-runner child at boot, and the child inherits `NODE_OPTIONS`, so it gets its own 400 MB ceiling. Boot is the hungriest moment (every node package loads, migrations run, workflows activate, the runner starts), so a fraction of cold starts cross the limit.
+
+Settings on the `edi-triage-n8n` service in the Render dashboard (Environment tab):
+
+| Variable | Value | Why |
+|---|---|---|
+| `NODE_OPTIONS` | `--max-old-space-size=320` | boot needs more than the 256 default; 400 overshoots. If 320 fails to boot, try 352. |
+| `N8N_RUNNERS_MAX_OLD_SPACE_SIZE` | `128` | caps the task-runner child instead of letting it inherit the main heap. Verify the name against the docs for the deployed n8n version. |
+| `N8N_DIAGNOSTICS_ENABLED` | `false` | boot-time extras off |
+| `N8N_VERSION_NOTIFICATIONS_ENABLED` | `false` | boot-time extras off |
+| `N8N_TEMPLATES_ENABLED` | `false` | boot-time extras off |
+| `N8N_PERSONALIZATION_ENABLED` | `false` | boot-time extras off |
+| `EXECUTIONS_DATA_PRUNE` | `true` | keep the Postgres small |
+| `EXECUTIONS_DATA_MAX_AGE` | `168` | hours; one week of executions |
+| `EXECUTIONS_DATA_PRUNE_MAX_COUNT` | `200` | hard cap on stored executions |
+
+Keep saving successful executions: the Ticket flow tab reads them through the n8n MCP endpoint.
+
+Verify: force four or five cold starts (suspend and resume the service, or wait 15 minutes between hits to `/healthz`) and watch the Events tab. Expect boots of 60 to 90 s and no "exceeded memory" restarts.
+
+Also check the database. Render free Postgres expires about 30 days after creation; this one was created on 2026-09-08 and the dashboard showed 2026-10-08 as the deletion date. When it goes, the workflow, the credential and the MCP token go with it.
+
+The honest ceiling: n8n on 512 MB is below the vendor minimum and stays marginal after tuning. Two ways out. One month of Render Standard (2 GB) for the n8n service only, or run n8n locally through a named cloudflared tunnel during live demos (the "Public URL" section above) with the hosted copy as the fallback.
 
 ## Push a change
 

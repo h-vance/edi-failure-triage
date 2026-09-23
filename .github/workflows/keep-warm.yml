@@ -1,17 +1,28 @@
-# The live demo runs on Render's free tier, which spins the service down
-# after 15 minutes without traffic. A cold visitor then waits about 50
-# seconds for the first byte, which is longer than anyone following a
-# "live demo" link will wait. Pinging the health endpoint keeps the
-# container resident, so the first click answers in under a second.
+# Best-effort boot check for the live demo, not a keep-alive.
 #
-# Render restarts the container from time to time, and a single ping that
-# lands mid-restart used to fail the whole run. Six attempts spread over
-# a few minutes tell a restart apart from a service that is genuinely down.
+# Both demo services run on Render's free tier, which spins a service down
+# after 15 idle minutes. This job was written to ping every 10 minutes so
+# they would never sleep, but GitHub throttles scheduled runs on quiet
+# repositories: over 9/8 to 9/23 it fired 100 times with a median gap of
+# about 3.4 hours and never twice inside 15 minutes. So every ping is a cold
+# start and nothing stays warm. What actually wakes n8n is the console: the
+# Ticket flow tab polls GET /demo/warm on the triage server, which probes
+# n8n and holds the Send button until it answers.
+#
+# The job still earns its place as a boot check for the hosted n8n. It runs
+# only in a demo window, weekdays 7am to 8pm ET (11-23 UTC during EDT; in
+# EST the same line means 6am to 7pm). Render pools free instance hours
+# across the workspace, and two services awake around the clock would
+# exceed the monthly allowance and get both suspended.
+#
+# A cold start takes 60 to 90 seconds and a restart mid-boot answers 502
+# for a while, so five attempts with a 60 s budget each and 20 s between
+# them tell a slow boot apart from a service that is genuinely down.
 name: Keep warm
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/10 11-23 * * 1-5"
   workflow_dispatch:
 
 permissions: {}
@@ -30,15 +41,15 @@ jobs:
         env:
           HEALTH_URL: ${{ matrix.url }}
         run: |
-          for attempt in 1 2 3 4 5 6; do
-            if status=$(curl -sfS --max-time 90 -o /dev/null -w '%{http_code}' "$HEALTH_URL"); then
-              echo "Attempt $attempt: HTTP $status, the service is warm."
+          for attempt in 1 2 3 4 5; do
+            if status=$(curl -sfS --max-time 60 -o /dev/null -w '%{http_code}' "$HEALTH_URL"); then
+              echo "Attempt $attempt: HTTP $status, the service is up."
               exit 0
             fi
             echo "Attempt $attempt did not get a healthy response."
-            if [ "$attempt" -lt 6 ]; then
-              sleep 30
+            if [ "$attempt" -lt 5 ]; then
+              sleep 20
             fi
           done
-          echo "No healthy response after 6 attempts."
+          echo "No healthy response after 5 attempts over about six minutes."
           exit 1
