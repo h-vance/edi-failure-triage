@@ -56,6 +56,8 @@ Keep saving successful executions: the Ticket flow tab reads them through the n8
 
 Verify: force four or five cold starts (suspend and resume the service, or wait 15 minutes between hits to `/healthz`) and watch the Events tab. Expect boots of 60 to 90 s and no "exceeded memory" restarts.
 
+Applied and verified on 2026-09-23: the nine settings above went in through the dashboard, then the environment redeploy plus four forced restarts (Manual Deploy > Restart service) all booted clean in 49 to 90 s. The Events tab shows no memory failure since the change; the four before it (9/19, twice on 9/22, 9/23 morning) all predate it.
+
 Also check the database. Render free Postgres expires about 30 days after creation; this one was created on 2026-09-08 and the dashboard showed 2026-10-08 as the deletion date. When it goes, the workflow, the credential and the MCP token go with it.
 
 The honest ceiling: n8n on 512 MB is below the vendor minimum and stays marginal after tuning. Two ways out. One month of Render Standard (2 GB) for the n8n service only, or run n8n locally through a named cloudflared tunnel during live demos (the "Public URL" section above) with the hosted copy as the fallback.
