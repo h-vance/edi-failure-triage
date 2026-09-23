@@ -11,6 +11,7 @@ import json
 import os
 import threading
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -52,6 +53,43 @@ def _script(name: str):
 def status() -> dict:
     missing = [k for k in REQUIRED_ENV if not os.getenv(k)]
     return {"ready": not missing, "missing": missing}
+
+
+# The hosted n8n is a Render free instance: it sleeps after 15 idle minutes and takes a minute
+# or two to boot. GET /healthz with a short timeout tells the two apart, and the request itself
+# is what starts the boot, so the console polls this until n8n answers instead of firing a
+# webhook at a sleeping instance.
+WARM_TTL = 60.0     # trust a warm answer this long; polling keeps a visible console's n8n awake at ~1 request/min
+WAKING_TTL = 5.0    # while booting, probe at most this often however many tabs are polling
+WARM_TIMEOUT = 8.0  # seconds to wait on /healthz before calling it "waking"
+_warm = {"n8n": "unknown", "checked_at": 0.0, "waking_since": None}
+
+
+def reset_warm() -> None:
+    """Forget what we know about n8n. Intended for test isolation."""
+    _warm.update(n8n="unknown", checked_at=0.0, waking_since=None)
+
+
+def _probe_n8n(timeout: float) -> bool:
+    try:
+        with urllib.request.urlopen(f"{N8N_URL}/healthz", timeout=timeout) as r:
+            return 200 <= r.status < 300
+    except (OSError, ValueError):  # timed out while booting, refused, or 502 from Render mid-restart
+        return False
+
+
+def warm(now: float | None = None) -> dict:
+    """Is the hosted n8n awake? {"n8n": "warm" | "waking", "waking_for": seconds since first seen asleep}."""
+    now = time.time() if now is None else now
+    ttl = WARM_TTL if _warm["n8n"] == "warm" else WAKING_TTL
+    if now - _warm["checked_at"] >= ttl:
+        _warm["checked_at"] = now
+        if _probe_n8n(WARM_TIMEOUT):
+            _warm.update(n8n="warm", waking_since=None)
+        else:
+            _warm.update(n8n="waking", waking_since=_warm["waking_since"] or now)
+    since = _warm["waking_since"]
+    return {"n8n": _warm["n8n"], "waking_for": round(now - since) if since is not None else 0}
 
 
 def start(fixture_name: str) -> dict:

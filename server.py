@@ -66,6 +66,11 @@ async def demo_status():
     return demo_journey.status()
 
 
+@app.get("/demo/warm")
+def demo_warm():  # sync on purpose: urllib to n8n must not block the loop
+    return demo_journey.warm()
+
+
 @app.post("/demo/ticket")
 def demo_ticket(body: DemoTicket):  # sync on purpose: urllib to Intercom/n8n must not block the loop
     st = demo_journey.status()
