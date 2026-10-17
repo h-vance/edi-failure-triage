@@ -1,7 +1,6 @@
 # EDI Failure Triage
 
 [![CI](https://github.com/h-vance/edi-failure-triage/actions/workflows/lint.yml/badge.svg)](https://github.com/h-vance/edi-failure-triage/actions/workflows/lint.yml)
-[![Keep warm](https://github.com/h-vance/edi-failure-triage/actions/workflows/keep-warm.yml/badge.svg)](https://github.com/h-vance/edi-failure-triage/actions/workflows/keep-warm.yml)
 [![Live demo](https://img.shields.io/badge/live%20demo-render-46E3B7?logo=render&logoColor=white)](https://edi-failure-triage.onrender.com)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](requirements.txt)
 [![TypeScript](https://img.shields.io/badge/typescript-n8n%20workflow%20SDK-3178C6?logo=typescript&logoColor=white)](n8n/edi-ticket-triage.workflow.template.ts)
@@ -9,7 +8,7 @@
 [![MCP](https://img.shields.io/badge/MCP-streamable%20HTTP-000000)](#mcp)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-Mock mode on Render's free tier, with n8n hosted next to it, so the **Ticket flow** button opens a real sandbox ticket and runs the whole workflow. Free instances sleep when idle. Opening the console wakes n8n and the Ticket flow tab says so while it boots; a weekday-daytime ping from GitHub Actions is a best-effort boot check, not a keep-alive.
+Mock mode on Render's free tier, with n8n hosted next to it, so the **Ticket flow** button opens a real sandbox ticket and runs the whole workflow. Free instances sleep when idle. Opening the console wakes n8n and the Ticket flow tab says so while it boots.
 
 A support copilot for a series of failed EDI transactions. In: the transaction's statuses, error text, a payload snippet, and the customer's note. Out: which integration path the customer is on, which failure state the transaction is in, two or three ranked causes with the evidence behind each, a draft customer reply, and the follow-up ("ticket two") that prevents the next ticket of the same kind.
 
