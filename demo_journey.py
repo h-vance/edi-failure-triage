@@ -11,7 +11,7 @@ import json
 import os
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import intercom_bridge
@@ -115,13 +115,13 @@ def poll(cid: str) -> dict:
 # ---------- pure ----------
 
 def to_iso(t: float) -> str:
-    return datetime.fromtimestamp(t, tz=timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    return datetime.fromtimestamp(t, tz=UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def from_iso(s: str | None) -> float | None:
     if not s:
         return None
-    return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
+    return datetime.fromisoformat(s).timestamp()
 
 
 def build_journey(conv: dict, executions: list, triage_seen: dict | None, fired_at: float, app_id_code: str | None = None) -> dict:
